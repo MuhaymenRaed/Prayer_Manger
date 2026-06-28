@@ -1,24 +1,53 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import "react-native-reanimated";
+import "../global.css";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { CloudSync } from "../components/CloudSync";
+import { NotificationManager } from "../components/NotificationManager";
+import { AuthProvider } from "../contexts/AuthContext";
+import { LanguageProvider } from "../contexts/LanguageContext";
+import { SettingsProvider } from "../contexts/SettingsContext";
+import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
+import { TrackerProvider } from "../contexts/TrackerContext";
+import { requestNotificationPermissions } from "../services/notificationService";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function RootLayoutNav() {
+  const { isDarkMode } = useTheme();
+
+  useEffect(() => {
+    requestNotificationPermissions();
+  }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      <NotificationManager />
+      <CloudSync />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <LanguageProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <TrackerProvider>
+            <AuthProvider>
+              <RootLayoutNav />
+            </AuthProvider>
+          </TrackerProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

@@ -41,3 +41,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# local env
+.env
+
+# stray expo scaffold (not part of this app)
+my-expo-app/
