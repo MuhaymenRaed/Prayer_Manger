@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Modal,
   Pressable,
@@ -138,10 +139,19 @@ function PrayerCard({
     runFeedback("bad", t.tracker.regretMsg);
   }, [addMissed, prayerKey, runFeedback, t]);
 
-  const handleReset = useCallback(async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await resetOne(prayerKey);
-  }, [prayerKey, resetOne]);
+  const handleReset = useCallback(() => {
+    Alert.alert(t.tracker.resetTitle, t.tracker.resetMsg(label), [
+      { text: t.tracker.cancel, style: "cancel" },
+      {
+        text: t.tracker.reset,
+        style: "destructive",
+        onPress: async () => {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          await resetOne(prayerKey);
+        },
+      },
+    ]);
+  }, [prayerKey, resetOne, t, label]);
 
   const flashColor = feedback.type === "good" ? colors.success : colors.danger;
   const translateX = shake.interpolate({
@@ -262,17 +272,28 @@ function PrayerCard({
 
             {/* feedback line */}
             {feedback.type && (
-              <Animated.Text
-                className="text-xs font-semibold mt-2.5"
+              <Animated.View
+                className="flex-row items-center gap-1.5 mt-2.5"
                 style={{
-                  color: feedback.type === "good" ? colors.successText : colors.dangerText,
-                  textAlign: isRTL ? "right" : "left",
+                  flexDirection: isRTL ? "row-reverse" : "row",
                   opacity: flash,
                 }}
               >
-                {feedback.type === "good" ? "🌿 " : "💧 "}
-                {feedback.text}
-              </Animated.Text>
+                <Ionicons
+                  name={feedback.type === "good" ? "sparkles" : "water-outline"}
+                  size={14}
+                  color={feedback.type === "good" ? colors.successText : colors.dangerText}
+                />
+                <Text
+                  className="text-xs font-semibold flex-1"
+                  style={{
+                    color: feedback.type === "good" ? colors.successText : colors.dangerText,
+                    textAlign: isRTL ? "right" : "left",
+                  }}
+                >
+                  {feedback.text}
+                </Text>
+              </Animated.View>
             )}
 
             {/* actions */}

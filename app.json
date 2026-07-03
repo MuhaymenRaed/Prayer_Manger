@@ -1,21 +1,25 @@
 {
   "expo": {
-    "name": "PrayerManger",
+    "name": "Yaqeen",
     "slug": "PrayerManger",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "prayermanger",
+    "scheme": "yaqeen",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "locales": {
+      "en": "./locales/en.json",
+      "ar": "./locales/ar.json"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.PrayerManger"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#0A130A",
+        "backgroundColor": "#15803D",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
@@ -32,23 +36,24 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 220,
+          "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0A130A",
+          "backgroundColor": "#15803D",
           "dark": {
-            "backgroundColor": "#0A130A"
+            "backgroundColor": "#15803D"
           }
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
-          "color": "#2ECC71",
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#15803D",
           "defaultChannel": "prayers",
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      "./plugins/withArabicAppName"
     ],
     "experiments": {
       "typedRoutes": true,

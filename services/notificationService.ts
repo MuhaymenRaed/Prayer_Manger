@@ -13,7 +13,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
-type Kind = "prayer" | "motivation" | "quran";
+type Kind = "prayer" | "motivation" | "quran" | "pinned";
+
+const PINNED_ID = "pinned-daily-times";
 
 export async function requestNotificationPermissions(): Promise<boolean> {
   if (Platform.OS === "android") {
@@ -34,6 +36,11 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       importance: Notifications.AndroidImportance.DEFAULT,
       lightColor: "#2ECC71",
     });
+    await Notifications.setNotificationChannelAsync("pinned", {
+      name: "Pinned Prayer Times",
+      importance: Notifications.AndroidImportance.LOW, // silent, no heads-up
+      sound: undefined,
+    });
   }
 
   const { status } = await Notifications.requestPermissionsAsync();
@@ -50,11 +57,15 @@ async function cancelByKind(kind: Kind): Promise<void> {
   );
 }
 
+export interface PrayerNotifContent {
+  title: string;
+  body: string;
+}
+
 export async function schedulePrayerNotifications(
   prayers: PrayerTimeInfo[],
   withVibration: boolean,
-  notifTitle?: (name: string) => string,
-  notifBody?: (name: string, arabic: string) => string,
+  buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
 ): Promise<void> {
   // Cancel only previous prayer alerts, preserving motivation/quran ones.
   await cancelByKind("prayer");
@@ -62,15 +73,10 @@ export async function schedulePrayerNotifications(
   const now = new Date();
 
   for (const prayer of prayers) {
-    if (prayer.isSunrise || prayer.isPassed) continue;
+    if (prayer.isInformational || prayer.isPassed) continue;
     if (prayer.time.getTime() <= now.getTime()) continue;
 
-    const title = notifTitle
-      ? notifTitle(prayer.name)
-      : `🕌 ${prayer.name} Prayer Time`;
-    const body = notifBody
-      ? notifBody(prayer.name, prayer.arabicName)
-      : `It's time for ${prayer.name} — ${prayer.arabicName}`;
+    const { title, body } = buildContent(prayer);
 
     await Notifications.scheduleNotificationAsync({
       content: {
@@ -86,6 +92,30 @@ export async function schedulePrayerNotifications(
       },
     });
   }
+}
+
+/**
+ * Show/refresh the persistent "today's times" notification (like the
+ * haqibat al-mumin pinned bar). Minimal by design: no title, one line of
+ * times — the app icon does the talking. Re-posting with the same
+ * identifier replaces the previous one in place. Android-sticky, silent.
+ */
+export async function showPinnedTimes(body: string): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    identifier: PINNED_ID,
+    content: {
+      title: null,
+      body,
+      sound: false,
+      sticky: true,
+      data: { kind: "pinned" as Kind },
+    },
+    trigger: { channelId: "pinned" }, // presents immediately on this channel
+  });
+}
+
+export async function dismissPinnedTimes(): Promise<void> {
+  await Notifications.dismissNotificationAsync(PINNED_ID);
 }
 
 /**
@@ -154,6 +184,8 @@ export async function scheduleQuranNotification(
 
 export async function cancelAllNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
+  // The pinned bar is presented (not scheduled), so dismiss it explicitly.
+  await Notifications.dismissNotificationAsync(PINNED_ID).catch(() => {});
 }
 
 export async function cancelMotivationNotifications(): Promise<void> {

@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
+import type { User } from "@supabase/supabase-js";
 import React, { useCallback, useState } from "react";
 import {
   Alert,
@@ -23,6 +25,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import { dismissPinnedTimes } from "../../services/notificationService";
 import { saveLocation } from "../../services/storageService";
 import { SavedLocation } from "../../types/prayer";
 
@@ -186,6 +189,104 @@ function ActionRow({
 }
 
 // â”€â”€â”€ Main Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Account Card (signed-in state) ──────────────────────────────────────────
+function AccountCard({
+  user,
+  onLogout,
+  colors,
+  t,
+  isRTL,
+}: {
+  user: User;
+  onLogout: () => void;
+  colors: Colors;
+  t: ReturnType<typeof useLanguage>["t"];
+  isRTL: boolean;
+}) {
+  const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
+  const name =
+    meta.display_name || meta.full_name || meta.name || user.email?.split("@")[0] || "";
+  const avatar = meta.avatar_url || meta.picture;
+  const provider = user.app_metadata?.provider;
+  const providerLabel = provider === "google" ? t.settings.viaGoogle : t.settings.viaEmail;
+  const initial = (name || user.email || "?").trim().charAt(0).toUpperCase();
+
+  return (
+    <View className="p-5" style={{ backgroundColor: colors.settingRow }}>
+      {/* identity */}
+      <View
+        className="flex-row items-center gap-3.5"
+        style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
+      >
+        {avatar ? (
+          <Image
+            source={{ uri: avatar }}
+            style={{ width: 56, height: 56, borderRadius: 28 }}
+            contentFit="cover"
+          />
+        ) : (
+          <View
+            className="w-14 h-14 rounded-full items-center justify-center"
+            style={{ backgroundColor: colors.tint }}
+          >
+            <Text className="text-2xl font-bold" style={{ color: colors.addBtnText }}>
+              {initial}
+            </Text>
+          </View>
+        )}
+
+        <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
+          {!!name && (
+            <Text className="text-base font-bold" style={{ color: colors.text }} numberOfLines={1}>
+              {name}
+            </Text>
+          )}
+          <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
+            {user.email}
+          </Text>
+          <View
+            className="flex-row items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: colors.countBox, flexDirection: isRTL ? "row-reverse" : "row" }}
+          >
+            <Ionicons
+              name={provider === "google" ? "logo-google" : "mail-outline"}
+              size={11}
+              color={colors.textSecondary}
+            />
+            <Text className="text-[11px] font-medium" style={{ color: colors.textSecondary }}>
+              {providerLabel}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* synced status */}
+      <View
+        className="flex-row items-center gap-1.5 mt-4 px-3 py-2 rounded-xl"
+        style={{ backgroundColor: colors.successBg, flexDirection: isRTL ? "row-reverse" : "row" }}
+      >
+        <Ionicons name="cloud-done-outline" size={15} color={colors.successText} />
+        <Text className="text-xs font-medium" style={{ color: colors.successText }}>
+          {t.settings.accountSynced}
+        </Text>
+      </View>
+
+      {/* sign out */}
+      <TouchableOpacity
+        className="flex-row items-center justify-center gap-2 mt-3 py-3 rounded-2xl border"
+        style={{ borderColor: colors.border }}
+        onPress={onLogout}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="log-out-outline" size={17} color={colors.dangerText} />
+        <Text className="text-sm font-semibold" style={{ color: colors.dangerText }}>
+          {t.settings.logout}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Location Picker Modal ───────────────────────────────────────────────────
 function LocationPicker({
   visible,
@@ -331,6 +432,12 @@ export default function SettingsScreen() {
   const handleToggleQuran = useCallback(() => {
     updateSetting("quranDaily", !settings.quranDaily);
   }, [settings.quranDaily, updateSetting]);
+
+  const handleTogglePinned = useCallback(async () => {
+    const next = !settings.pinnedTimes;
+    await updateSetting("pinnedTimes", next);
+    if (!next) dismissPinnedTimes().catch(() => {});
+  }, [settings.pinnedTimes, updateSetting]);
 
   const handleThemeToggle = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -588,6 +695,14 @@ export default function SettingsScreen() {
             onToggle={handleToggleQuran}
             colors={colors}
             isRTL={isRTL}
+          />
+          <ToggleRow
+            label={t.settings.pinnedTimes}
+            description={t.settings.pinnedTimesDesc}
+            value={settings.pinnedTimes}
+            onToggle={handleTogglePinned}
+            colors={colors}
+            isRTL={isRTL}
             isLast
           />
         </Section>
@@ -600,14 +715,12 @@ export default function SettingsScreen() {
           isRTL={isRTL}
         >
           {user ? (
-            <ActionRow
-              label={t.settings.signedInAs(user.email ?? "")}
-              description={t.settings.createAccountDesc}
-              actionLabel={t.settings.logout}
-              onPress={handleLogout}
+            <AccountCard
+              user={user}
+              onLogout={handleLogout}
               colors={colors}
+              t={t}
               isRTL={isRTL}
-              isLast
             />
           ) : (
             <>

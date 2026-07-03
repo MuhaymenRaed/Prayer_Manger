@@ -41,6 +41,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   vibration: false,
   motivation: true,
   quranDaily: true,
+  pinnedTimes: true,
   locationId: DEFAULT_LOCATION_ID,
 };
 

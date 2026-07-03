@@ -3,8 +3,10 @@ export type PrayerName =
   | "Sunrise"
   | "Dhuhr"
   | "Asr"
+  | "Sunset"
   | "Maghrib"
-  | "Isha";
+  | "Isha"
+  | "Midnight";
 
 export interface PrayerTimeInfo {
   name: PrayerName;
@@ -12,7 +14,8 @@ export interface PrayerTimeInfo {
   time: Date;
   isPassed: boolean;
   isNext: boolean;
-  isSunrise: boolean;
+  /** Sunrise / Sunset / Midnight — shown for reference, never notified. */
+  isInformational: boolean;
 }
 
 /**
@@ -47,6 +50,8 @@ export interface AppSettings {
   motivation: boolean;
   /** Daily Quran ayah notification. */
   quranDaily: boolean;
+  /** Persistent notification pinned with today's prayer times. */
+  pinnedTimes: boolean;
   /** id of the manually selected location, or "auto" for GPS. */
   locationId: string;
 }
@@ -68,4 +73,6 @@ export interface LocationOption {
   nameAr: string;
   latitude: number;
   longitude: number;
+  /** IANA timezone, e.g. "Asia/Baghdad" — used to display times correctly. */
+  timezone: string;
 }

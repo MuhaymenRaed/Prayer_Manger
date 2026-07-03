@@ -25,6 +25,9 @@ export const supabase = createClient(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: false,
+      // PKCE: OAuth + password-recovery links return a `code` we exchange
+      // manually via exchangeCodeForSession (see AuthContext / auth/reset).
+      flowType: "pkce",
     },
   },
 );

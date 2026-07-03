@@ -19,8 +19,13 @@ interface AuthContextValue {
   loading: boolean;
   configured: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ needsConfirm: boolean }>;
+  signUpWithEmail: (
+    email: string,
+    password: string,
+    displayName?: string,
+  ) => Promise<{ needsConfirm: boolean; alreadyRegistered: boolean }>;
   signInWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -50,11 +55,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   }, []);
 
-  const signUpWithEmail = useCallback(async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+  const signUpWithEmail = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: displayName
+          ? { data: { display_name: displayName } }
+          : undefined,
+      });
+      if (error) {
+        // With email confirmations OFF Supabase reports duplicates directly.
+        if (/already registered|already exists/i.test(error.message)) {
+          return { needsConfirm: false, alreadyRegistered: true };
+        }
+        throw error;
+      }
+      // With confirmations ON, Supabase returns an obfuscated user with an
+      // empty identities array for duplicate emails (anti-enumeration).
+      const alreadyRegistered = (data.user?.identities?.length ?? 1) === 0;
+      return {
+        needsConfirm: !data.session && !alreadyRegistered,
+        alreadyRegistered,
+      };
+    },
+    [],
+  );
+
+  const resetPassword = useCallback(async (email: string) => {
+    const redirectTo = Linking.createURL("auth/reset");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
     if (error) throw error;
-    // When email confirmation is on, there's no active session yet.
-    return { needsConfirm: !data.session };
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
@@ -91,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,
+        resetPassword,
         signOut,
       }}
     >

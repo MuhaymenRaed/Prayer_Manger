@@ -7,6 +7,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
+// Keep the tracker (main) as the landing tab regardless of tab order.
+export const unstable_settings = {
+  initialRouteName: "index",
+};
+
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
 function TabIcon({
@@ -30,7 +35,7 @@ function TabIcon({
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const insets = useSafeAreaInsets();
 
   // Reserve the device's bottom safe area (gesture bar / nav buttons / notch)
@@ -70,33 +75,44 @@ export default function TabLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t.tabs.tracker,
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="timer-outline" focused={focused} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="prayer-times"
-        options={{
-          title: t.tabs.prayerTimes,
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="calendar-outline" focused={focused} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t.tabs.settings,
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="settings-outline" focused={focused} color={color} />
-          ),
-        }}
-      />
+      {/*
+        Tab order:
+          • Arabic (RTL): Tracker → Prayer Times → Settings  (current order)
+          • English (LTR): Settings → Prayer Times → Tracker  (reversed)
+        The `order` array below is rendered left-to-right; `initialRouteName`
+        keeps the tracker as the opening tab either way.
+      */}
+      {(isRTL
+        ? ["index", "prayer-times", "settings"]
+        : ["settings", "prayer-times", "index"]
+      ).map((name) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={
+            name === "index"
+              ? {
+                  title: t.tabs.tracker,
+                  tabBarIcon: ({ color, focused }) => (
+                    <TabIcon name="timer-outline" focused={focused} color={color} />
+                  ),
+                }
+              : name === "prayer-times"
+                ? {
+                    title: t.tabs.prayerTimes,
+                    tabBarIcon: ({ color, focused }) => (
+                      <TabIcon name="calendar-outline" focused={focused} color={color} />
+                    ),
+                  }
+                : {
+                    title: t.tabs.settings,
+                    tabBarIcon: ({ color, focused }) => (
+                      <TabIcon name="settings-outline" focused={focused} color={color} />
+                    ),
+                  }
+          }
+        />
+      ))}
     </Tabs>
   );
 }
