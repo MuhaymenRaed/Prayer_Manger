@@ -39,11 +39,12 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
   // Reserve the device's bottom safe area (gesture bar / nav buttons / notch)
-  // on BOTH platforms so the bar never sits under the system navigation.
-  const BASE_H = 60;
-  const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 8 : 0);
+  // on BOTH platforms, plus generous breathing room so the labels never sit
+  // flush against an opaque 3-button system bar.
+  const BASE_H = 64;
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 10 : 0);
   const TAB_H = BASE_H + bottomInset;
-  const TAB_PB = bottomInset + 6;
+  const TAB_PB = bottomInset + 12;
 
   return (
     <Tabs
