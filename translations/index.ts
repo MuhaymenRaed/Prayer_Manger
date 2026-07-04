@@ -111,6 +111,10 @@ export const T = {
       appVersion: "Yaqeen · v1.0.0",
       tagline: "Shia Jafari · Built with love for the Muslim community",
       privacy: "Privacy Policy",
+      privacyTitle: "Privacy Policy",
+      privacyBody:
+        "Yaqeen respects your privacy.\n\n• Your prayer tracker, settings and location choice are stored on your device.\n• If you create an account, your tracker and settings are also stored securely in our database so they can sync across your devices. Your data is protected and is never visible to other users.\n• Your location is used only to calculate prayer times — it is never shared or sold.\n• Yaqeen contains no ads and no third-party analytics.\n• You can delete your account data at any time by contacting support.",
+      ok: "OK",
       support: "Support",
       comingSoon: "Coming Soon",
       comingSoonMsg: "This feature will be available in a future update.",
@@ -324,6 +328,10 @@ export const T = {
       appVersion: "يقين · الإصدار 1.0.0",
       tagline: "المنهج الجعفري الشيعي · صُنع بمحبة للأمة الإسلامية",
       privacy: "سياسة الخصوصية",
+      privacyTitle: "سياسة الخصوصية",
+      privacyBody:
+        "يقين يحترم خصوصيتك.\n\n• متتبع صلواتك وإعداداتك وموقعك المختار تُخزَّن على جهازك.\n• إذا أنشأت حساباً، تُخزَّن بياناتك أيضاً بأمان في قاعدة بياناتنا لمزامنتها عبر أجهزتك، وهي محمية ولا يطّلع عليها أي مستخدم آخر.\n• يُستخدم موقعك فقط لحساب أوقات الصلاة — ولا يُشارك أو يُباع أبداً.\n• لا يحتوي يقين على إعلانات ولا أدوات تحليل خارجية.\n• يمكنك حذف بيانات حسابك في أي وقت بالتواصل مع الدعم.",
+      ok: "حسناً",
       support: "الدعم",
       comingSoon: "قريباً",
       comingSoonMsg: "هذه الميزة ستتوفر في تحديث قادم.",

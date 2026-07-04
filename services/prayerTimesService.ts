@@ -20,23 +20,28 @@ import { PrayerName, PrayerTimeInfo } from "../types/prayer";
  * Also derives Sunset (astronomical) and the shar'i Midnight (the midpoint
  * between sunset and the next dawn) which Shia timetables display.
  */
-function buildParams() {
+function baseParams() {
   const params = CalculationMethod.Tehran(); // 17.7 / 14 / maghrib 4.5
   params.madhab = Madhab.Shafi;
   params.fajrAngle = 18;
   params.maghribAngle = 4;
   params.ishaAngle = 14;
-  // Published Shia timetables (hmomen) round times UP to the next minute
-  // (ihtiyat — the time has certainly entered); nearest-rounding drifts
-  // 1 minute early whenever the true seconds are < 30. Exception: Fajr
-  // uses NEAREST (verified against hmomen for Kut & Karbala across dates —
-  // see getShiaPrayerTimes).
+  return params;
+}
+
+// Rounding convention, verified empirically against hmomen (haqibat
+// al-mumin) across multiple Iraqi cities and dates (31/32 exact):
+//   - Asr / Sunset / Maghrib / Isha round UP (ihtiyat — the time has
+//     certainly entered / the fast has certainly ended).
+//   - Fajr / Sunrise / Dhuhr round NEAREST.
+function upParams() {
+  const params = baseParams();
   params.rounding = Rounding.Up;
   return params;
 }
 
-function fajrParams() {
-  const params = buildParams();
+function nearestParams() {
+  const params = baseParams();
   params.rounding = Rounding.Nearest;
   return params;
 }
@@ -51,19 +56,21 @@ export function getShiaPrayerTimes(
   timeToNext: string;
 } {
   const coordinates = new Coordinates(latitude, longitude);
-  const pt = new PrayerTimes(coordinates, date, buildParams());
+  const ptUp = new PrayerTimes(coordinates, date, upParams());
+  const ptNear = new PrayerTimes(coordinates, date, nearestParams());
   const now = new Date();
-  const nextEnum = pt.nextPrayer();
+  const nextEnum = ptUp.nextPrayer();
 
-  // Fajr rounds to NEAREST minute, unlike everything else (rounded up).
-  const fajr = new PrayerTimes(coordinates, date, fajrParams()).fajr;
-
-  // True astronomical sunset, computed (and rounded up) by the library.
-  const sunset = pt.sunset;
+  const fajr = ptNear.fajr;
+  const sunset = ptUp.sunset;
 
   // Shar'i midnight = midpoint between sunset and the next day's dawn.
   const tomorrow = new Date(date.getTime() + 86400000);
-  const fajrTomorrow = new PrayerTimes(coordinates, tomorrow, fajrParams()).fajr;
+  const fajrTomorrow = new PrayerTimes(
+    coordinates,
+    tomorrow,
+    nearestParams(),
+  ).fajr;
   const midnight = new Date((sunset.getTime() + fajrTomorrow.getTime()) / 2);
 
   const rows: {
@@ -74,12 +81,12 @@ export function getShiaPrayerTimes(
     informational: boolean;
   }[] = [
     { name: "Fajr", arabicName: "الفجر", time: fajr, prayerEnum: Prayer.Fajr, informational: false },
-    { name: "Sunrise", arabicName: "الشروق", time: pt.sunrise, prayerEnum: Prayer.Sunrise, informational: true },
-    { name: "Dhuhr", arabicName: "الظهر", time: pt.dhuhr, prayerEnum: Prayer.Dhuhr, informational: false },
-    { name: "Asr", arabicName: "العصر", time: pt.asr, prayerEnum: Prayer.Asr, informational: false },
+    { name: "Sunrise", arabicName: "الشروق", time: ptNear.sunrise, prayerEnum: Prayer.Sunrise, informational: true },
+    { name: "Dhuhr", arabicName: "الظهر", time: ptNear.dhuhr, prayerEnum: Prayer.Dhuhr, informational: false },
+    { name: "Asr", arabicName: "العصر", time: ptUp.asr, prayerEnum: Prayer.Asr, informational: false },
     { name: "Sunset", arabicName: "الغروب", time: sunset, prayerEnum: null, informational: true },
-    { name: "Maghrib", arabicName: "المغرب", time: pt.maghrib, prayerEnum: Prayer.Maghrib, informational: false },
-    { name: "Isha", arabicName: "العشاء", time: pt.isha, prayerEnum: Prayer.Isha, informational: false },
+    { name: "Maghrib", arabicName: "المغرب", time: ptUp.maghrib, prayerEnum: Prayer.Maghrib, informational: false },
+    { name: "Isha", arabicName: "العشاء", time: ptUp.isha, prayerEnum: Prayer.Isha, informational: false },
     { name: "Midnight", arabicName: "منتصف الليل", time: midnight, prayerEnum: null, informational: true },
   ];
 

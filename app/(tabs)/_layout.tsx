@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform, View } from "react-native";
+import { I18nManager, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -76,16 +76,19 @@ export default function TabLayout() {
       }}
     >
       {/*
-        Tab order:
-          • Arabic (RTL): Tracker → Prayer Times → Settings  (current order)
-          • English (LTR): Settings → Prayer Times → Tracker  (reversed)
-        The `order` array below is rendered left-to-right; `initialRouteName`
-        keeps the tracker as the opening tab either way.
+        Desired VISUAL order (left → right on screen):
+          • English: Settings → Prayer Times → Tracker
+          • Arabic:  Tracker → Prayer Times → Settings (settings at the right)
+        When the OS is in native RTL (Arabic device locale), the tab bar
+        renders children right-to-left, so the definition order must be
+        reversed to land on the same visual result.
       */}
-      {(isRTL
-        ? ["index", "prayer-times", "settings"]
-        : ["settings", "prayer-times", "index"]
-      ).map((name) => (
+      {(() => {
+        const visual = isRTL
+          ? ["index", "prayer-times", "settings"]
+          : ["settings", "prayer-times", "index"];
+        return I18nManager.isRTL ? [...visual].reverse() : visual;
+      })().map((name) => (
         <Tabs.Screen
           key={name}
           name={name}

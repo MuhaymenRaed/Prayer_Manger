@@ -402,6 +402,7 @@ export default function SettingsScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [authVisible, setAuthVisible] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [privacyVisible, setPrivacyVisible] = useState(false);
 
   const selectedCityName =
     settings.locationId === "auto"
@@ -507,11 +508,11 @@ export default function SettingsScreen() {
   }, [signOut]);
 
   const handlePrivacyPolicy = useCallback(() => {
-    Linking.openURL("https://example.com/privacy").catch(() => {});
+    setPrivacyVisible(true);
   }, []);
 
   const handleSupport = useCallback(() => {
-    Linking.openURL("mailto:support@prayermanager.app").catch(() => {});
+    Linking.openURL("mailto:moheamin852@gmail.com").catch(() => {});
   }, []);
 
   return (
@@ -535,6 +536,51 @@ export default function SettingsScreen() {
         initialMode={authMode}
         onClose={() => setAuthVisible(false)}
       />
+      {/* Privacy policy modal */}
+      <Modal
+        visible={privacyVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPrivacyVisible(false)}
+      >
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ backgroundColor: colors.overlay }}
+        >
+          <View
+            className="w-full rounded-3xl p-6"
+            style={{ backgroundColor: colors.card, maxHeight: "80%" }}
+          >
+            <View
+              className="flex-row items-center gap-2 mb-3"
+              style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
+            >
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.tint} />
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                {t.settings.privacyTitle}
+              </Text>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+              <Text
+                className="text-sm leading-6"
+                style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+              >
+                {t.settings.privacyBody}
+              </Text>
+            </ScrollView>
+            <TouchableOpacity
+              className="mt-5 py-3 rounded-2xl items-center"
+              style={{ backgroundColor: colors.tint }}
+              onPress={() => setPrivacyVisible(false)}
+              activeOpacity={0.85}
+            >
+              <Text className="text-sm font-bold" style={{ color: colors.addBtnText }}>
+                {t.settings.ok}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
