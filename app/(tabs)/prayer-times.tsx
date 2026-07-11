@@ -119,7 +119,7 @@ const PrayerRow = React.memo(function PrayerRow({
               color: active ? colors.tint : info ? colors.textSecondary : colors.text,
             }}
           >
-            {t.prayerNames[prayer.name] ?? prayer.name}
+            {t.athanNames[prayer.name] ?? prayer.name}
           </Text>
           {active && (
             <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: colors.badgeNext }}>
@@ -229,29 +229,16 @@ export default function PrayerTimesScreen() {
 
       // Per-prayer alerts, fully in the app's language (e.g. "صلاة المغرب").
       schedulePrayerNotifications(prayers, settings.vibration, (p) => {
-        const localized = t.prayerNames[p.name] ?? p.name;
+        const localized = t.athanNames[p.name] ?? p.name;
         return {
           title: t.notif.title(localized),
           body: t.notif.body(localized, p.arabicName),
         };
       }).catch(() => {});
 
-      // Persistent pinned bar — minimal single line: Fajr · Sunrise · Dhuhr
-      // · Maghrib. The full table lives in the app.
-      if (settings.pinnedTimes) {
-        const PINNED: PrayerName[] = ["Fajr", "Sunrise", "Dhuhr", "Maghrib"];
-        const line = prayers
-          .filter((p) => PINNED.includes(p.name))
-          .map(
-            (p) =>
-              `${t.prayerNames[p.name] ?? p.name} ${formatTime(p.time, lang, tz)}`,
-          )
-          .join("  ·  ");
-        showPinnedTimes(line).catch(() => {});
-      } else {
-        dismissPinnedTimes().catch(() => {});
-      }
+      updatePinned(prayers, tz);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       settings.prayerNotifications,
       settings.vibration,
@@ -259,6 +246,36 @@ export default function PrayerTimesScreen() {
       lang,
       t,
     ],
+  );
+
+  // Pinned bar — elegant single line: only the NEXT prayer + remaining time.
+  const updatePinned = useCallback(
+    (prayers: PrayerTimeInfo[], tz: string) => {
+      if (!settings.prayerNotifications || !settings.pinnedTimes) {
+        dismissPinnedTimes().catch(() => {});
+        return;
+      }
+      const next = prayers.find((p) => p.isNext);
+      if (!next) {
+        dismissPinnedTimes().catch(() => {});
+        return;
+      }
+      const mins = Math.max(
+        0,
+        Math.floor((next.time.getTime() - Date.now()) / 60000),
+      );
+      const remaining = t.prayerTimes.durationShort(
+        Math.floor(mins / 60),
+        mins % 60,
+      );
+      const line = t.notif.pinnedNext(
+        t.athanNames[next.name] ?? next.name,
+        formatTime(next.time, lang, tz),
+        remaining,
+      );
+      showPinnedTimes(line).catch(() => {});
+    },
+    [settings.prayerNotifications, settings.pinnedTimes, lang, t],
   );
 
   const apply = useCallback(
@@ -340,15 +357,19 @@ export default function PrayerTimesScreen() {
     };
   }, [settings.locationId, lang, reloadKey, apply, t]);
 
-  // Minute tick: refresh countdown / passed flags only (no notification churn).
+  // Minute tick: refresh countdown / passed flags + the pinned bar countdown.
+  const tzRef = useRef(timezone);
+  tzRef.current = timezone;
   useEffect(() => {
     const id = setInterval(() => {
       setToday(new Date());
       const { lat, lon } = coordsRef.current;
-      setResult(getShiaPrayerTimes(lat, lon));
+      const r = getShiaPrayerTimes(lat, lon);
+      setResult(r);
+      updatePinned(r.prayers, tzRef.current);
     }, 60000);
     return () => clearInterval(id);
-  }, []);
+  }, [updatePinned]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -357,7 +378,28 @@ export default function PrayerTimesScreen() {
     setTimeout(() => setRefreshing(false), 600);
   }, []);
 
-  const { prayers, nextPrayer, timeToNext } = result;
+  const { prayers, nextPrayer } = result;
+
+  // Rows visibility per user settings (display-only; alerts stay complete).
+  const visiblePrayers = prayers.filter((p) => {
+    if (!settings.showAsrIsha && (p.name === "Asr" || p.name === "Isha"))
+      return false;
+    if (
+      !settings.showSunEvents &&
+      (p.name === "Sunrise" || p.name === "Sunset" || p.name === "Midnight")
+    )
+      return false;
+    return true;
+  });
+
+  // Localized remaining time for the hero (recomputes on each minute tick).
+  const minsToNext = nextPrayer
+    ? Math.max(0, Math.floor((nextPrayer.time.getTime() - today.getTime()) / 60000))
+    : 0;
+  const timeToNext = t.prayerTimes.durationShort(
+    Math.floor(minsToNext / 60),
+    minsToNext % 60,
+  );
 
   return (
     <SafeAreaView className="flex-1" edges={["top", "left", "right"]} style={{ backgroundColor: colors.background }}>
@@ -398,7 +440,7 @@ export default function PrayerTimesScreen() {
                     {t.prayerTimes.nextPrayer}
                   </Text>
                   <Text className="text-3xl font-extrabold mt-1" style={{ color: colors.addBtnText }}>
-                    {t.prayerNames[nextPrayer.name] ?? nextPrayer.name}
+                    {t.athanNames[nextPrayer.name] ?? nextPrayer.name}
                   </Text>
                   <Text className="text-sm font-semibold mt-0.5" style={{ color: colors.addBtnText, opacity: 0.95 }}>
                     {formatTime(nextPrayer.time, lang, timezone)}
@@ -447,11 +489,11 @@ export default function PrayerTimesScreen() {
             className="rounded-3xl overflow-hidden border"
             style={{ backgroundColor: colors.card, borderColor: colors.border }}
           >
-            {prayers.map((prayer, idx) => (
+            {visiblePrayers.map((prayer, idx) => (
               <PrayerRow
                 key={prayer.name}
                 prayer={prayer}
-                isLast={idx === prayers.length - 1}
+                isLast={idx === visiblePrayers.length - 1}
                 timezone={timezone}
               />
             ))}

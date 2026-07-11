@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useDialog } from "../../components/AppDialog";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { supabase } from "../../services/supabase";
@@ -84,15 +84,17 @@ export default function ResetPasswordScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  const goHome = useCallback(() => router.replace("/(tabs)"), [router]);
+  const goHome = useCallback(() => router.replace("/(tabs)/settings"), [router]);
+
+  const dialog = useDialog();
 
   const handleUpdate = useCallback(async () => {
     if (password.length < 6) {
-      Alert.alert(a.errorTitle, a.passwordTooShort);
+      dialog.show({ title: a.errorTitle, message: a.passwordTooShort, icon: "alert-circle-outline" });
       return;
     }
     if (password !== confirm) {
-      Alert.alert(a.errorTitle, a.passwordMismatch);
+      dialog.show({ title: a.errorTitle, message: a.passwordMismatch, icon: "alert-circle-outline" });
       return;
     }
     setBusy(true);
@@ -101,11 +103,15 @@ export default function ResetPasswordScreen() {
       if (error) throw error;
       setPhase("done");
     } catch (e: unknown) {
-      Alert.alert(a.errorTitle, e instanceof Error ? e.message : String(e));
+      dialog.show({
+        title: a.errorTitle,
+        message: e instanceof Error ? e.message : String(e),
+        icon: "alert-circle-outline",
+      });
     } finally {
       setBusy(false);
     }
-  }, [password, confirm, a]);
+  }, [password, confirm, a, dialog]);
 
   const inputStyle = {
     backgroundColor: colors.countBox,

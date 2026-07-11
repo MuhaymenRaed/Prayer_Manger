@@ -58,6 +58,10 @@ async function main() {
     .png()
     .toFile(path.join(IMAGES, "android-icon-background.png"));
 
+  // Notification small icon — white glyph filling ~92% of the canvas so the
+  // status-bar / minimal notification icon reads at full size.
+  await compose("#FFFFFF", 940, 1024, TRANSPARENT, "notification-icon.png");
+
   // Favicon — green logo on white.
   await compose(BRAND, 150, 256, { r: 255, g: 255, b: 255, alpha: 1 }, "favicon.png");
 

@@ -60,9 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: displayName
-          ? { data: { display_name: displayName } }
-          : undefined,
+        options: {
+          emailRedirectTo: Linking.createURL("auth/callback"),
+          ...(displayName ? { data: { display_name: displayName } } : {}),
+        },
       });
       if (error) {
         // With email confirmations OFF Supabase reports duplicates directly.
@@ -106,7 +107,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const code = parsed.queryParams?.code as string | undefined;
     if (code) {
       const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
-      if (exErr) throw exErr;
+      if (exErr) {
+        // The auth/callback deep-link route may have redeemed this one-time
+        // code first ("invalid flow state"). If a session exists, the
+        // sign-in actually succeeded — don't surface a fake error.
+        const { data: s } = await supabase.auth.getSession();
+        if (!s.session) throw exErr;
+      }
     }
   }, []);
 

@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   Modal,
   Pressable,
@@ -14,22 +13,24 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useDialog } from "../../components/AppDialog";
+import { YaqeenLogoBox } from "../../components/YaqeenLogo";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { remaining, useTracker } from "../../contexts/TrackerContext";
 import { TrackerKey } from "../../types/prayer";
-
-type FeedbackType = "good" | "bad" | null;
 
 // ─── Animated progress bar ───────────────────────────────────────────────────
 function ProgressBar({
   pct,
   color,
   track,
+  height = 8,
 }: {
   pct: number;
   color: string;
   track: string;
+  height?: number;
 }) {
   const anim = useRef(new Animated.Value(pct)).current;
 
@@ -49,8 +50,8 @@ function ProgressBar({
 
   return (
     <View
-      className="h-2.5 rounded-full overflow-hidden w-full"
-      style={{ backgroundColor: track }}
+      className="rounded-full overflow-hidden w-full"
+      style={{ backgroundColor: track, height }}
     >
       <Animated.View
         style={{ width, height: "100%", backgroundColor: color, borderRadius: 999 }}
@@ -59,29 +60,33 @@ function ProgressBar({
   );
 }
 
-// ─── Prayer / Salat-al-Ayat card ─────────────────────────────────────────────
+// ─── Square prayer card ──────────────────────────────────────────────────────
+const PRAYER_ICONS: Record<string, React.ComponentProps<typeof Ionicons>["name"]> = {
+  fajr: "partly-sunny-outline",
+  dhuhr: "sunny-outline",
+  asr: "cloudy-outline",
+  maghrib: "moon-outline",
+  isha: "star-outline",
+  ayat: "planet-outline",
+};
+
 function PrayerCard({
   prayerKey,
   label,
-  arabic,
-  accent,
-  bg,
-  icon,
-  description,
   onEditTotal,
 }: {
   prayerKey: TrackerKey;
   label: string;
-  arabic: string;
-  accent?: string;
-  bg?: string;
-  icon?: React.ComponentProps<typeof Ionicons>["name"];
-  description?: string;
   onEditTotal: (key: TrackerKey) => void;
 }) {
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
   const { counts, markCompleted, addMissed, resetOne } = useTracker();
+  const dialog = useDialog();
+
+  const isAyat = prayerKey === "ayat";
+  const accent = isAyat ? colors.ayatAccent : colors.tint;
+  const cardBg = isAyat ? colors.ayatBg : colors.card;
 
   const progress = counts[prayerKey];
   const left = remaining(progress);
@@ -89,92 +94,73 @@ function PrayerCard({
   const isDone = progress.missed > 0 && left === 0;
   const isEmpty = progress.missed === 0;
 
-  const accentColor = accent ?? colors.tint;
-
-  // animations: flash overlay, shake (regret), pop (motivation)
   const flash = useRef(new Animated.Value(0)).current;
-  const shake = useRef(new Animated.Value(0)).current;
-  const pop = useRef(new Animated.Value(1)).current;
-  const [feedback, setFeedback] = useState<{ type: FeedbackType; text: string }>(
-    { type: null, text: "" },
-  );
+  const [flashColor, setFlashColor] = useState(colors.success);
 
-  const runFeedback = useCallback(
-    (type: Exclude<FeedbackType, null>, text: string) => {
-      setFeedback({ type, text });
+  const runFlash = useCallback(
+    (color: string) => {
+      setFlashColor(color);
       flash.setValue(1);
       Animated.timing(flash, {
         toValue: 0,
-        duration: 1600,
+        duration: 900,
         useNativeDriver: false,
-      }).start(() => setFeedback({ type: null, text: "" }));
-
-      if (type === "good") {
-        Animated.sequence([
-          Animated.spring(pop, { toValue: 1.04, useNativeDriver: true, speed: 50 }),
-          Animated.spring(pop, { toValue: 1, useNativeDriver: true, speed: 20 }),
-        ]).start();
-      } else {
-        Animated.sequence([
-          Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
-          Animated.timing(shake, { toValue: -1, duration: 60, useNativeDriver: true }),
-          Animated.timing(shake, { toValue: 1, duration: 60, useNativeDriver: true }),
-          Animated.timing(shake, { toValue: 0, duration: 60, useNativeDriver: true }),
-        ]).start();
-      }
+      }).start();
     },
-    [flash, pop, shake],
+    [flash],
   );
 
   const handlePrayed = useCallback(async () => {
     if (left <= 0) return;
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const newLeft = await markCompleted(prayerKey);
-    runFeedback("good", t.tracker.motivateMsg(newLeft));
-  }, [left, markCompleted, prayerKey, runFeedback, t]);
+    await markCompleted(prayerKey);
+    runFlash(colors.success);
+  }, [left, markCompleted, prayerKey, runFlash, colors.success]);
 
   const handleMissed = useCallback(async () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     await addMissed(prayerKey, 1);
-    runFeedback("bad", t.tracker.regretMsg);
-  }, [addMissed, prayerKey, runFeedback, t]);
+    runFlash(colors.danger);
+  }, [addMissed, prayerKey, runFlash, colors.danger]);
 
   const handleReset = useCallback(() => {
-    Alert.alert(t.tracker.resetTitle, t.tracker.resetMsg(label), [
-      { text: t.tracker.cancel, style: "cancel" },
-      {
-        text: t.tracker.reset,
-        style: "destructive",
-        onPress: async () => {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          await resetOne(prayerKey);
+    dialog.show({
+      title: t.tracker.resetTitle,
+      message: t.tracker.resetMsg(label),
+      icon: "refresh-circle-outline",
+      buttons: [
+        { text: t.tracker.cancel, style: "cancel" },
+        {
+          text: t.tracker.reset,
+          style: "destructive",
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            resetOne(prayerKey);
+          },
         },
-      },
-    ]);
-  }, [prayerKey, resetOne, t, label]);
-
-  const flashColor = feedback.type === "good" ? colors.success : colors.danger;
-  const translateX = shake.interpolate({
-    inputRange: [-1, 1],
-    outputRange: [-6, 6],
-  });
+      ],
+    });
+  }, [dialog, t, label, prayerKey, resetOne]);
 
   return (
-    <Animated.View
-      className="rounded-3xl mb-3.5 border overflow-hidden"
+    <View
+      className="rounded-3xl border overflow-hidden"
       style={{
-        backgroundColor: bg ?? colors.card,
-        borderColor: isDone ? colors.success : colors.border,
+        width: "48.2%",
+        backgroundColor: cardBg,
+        borderColor: isDone ? colors.success : isAyat ? colors.ayatAccent + "55" : colors.border,
         borderWidth: isDone ? 1.5 : 1,
-        transform: [{ scale: pop }, { translateX }],
         shadowColor: colors.cardShadow,
         shadowOpacity: 1,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
-        elevation: 3,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 2,
       }}
     >
-      {/* feedback flash overlay */}
+      {/* linked accent line across the family of cards */}
+      <View style={{ height: 3, backgroundColor: accent, opacity: isAyat ? 1 : 0.75 }} />
+
+      {/* feedback flash */}
       <Animated.View
         pointerEvents="none"
         style={{
@@ -184,172 +170,119 @@ function PrayerCard({
           right: 0,
           bottom: 0,
           backgroundColor: flashColor,
-          opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.12] }),
+          opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.14] }),
         }}
       />
 
-      <View className="p-5">
-        {/* header row */}
+      <View className="p-3.5">
+        {/* header */}
         <View
-          className="flex-row items-center justify-between mb-3"
+          className="flex-row items-center justify-between mb-2"
           style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
         >
           <View
-            className="flex-row items-center gap-2.5"
+            className="flex-row items-center gap-2"
             style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
           >
             <View
-              className="w-9 h-9 rounded-full items-center justify-center"
-              style={{ backgroundColor: accentColor + "22" }}
+              className="w-8 h-8 rounded-full items-center justify-center"
+              style={{ backgroundColor: accent + "22" }}
             >
-              <Ionicons name={icon ?? "moon"} size={18} color={accentColor} />
+              <Ionicons name={PRAYER_ICONS[prayerKey]} size={15} color={accent} />
             </View>
-            <View style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
-              <Text className="text-base font-bold" style={{ color: colors.text }}>
-                {label}
-              </Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                {description ?? arabic}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => onEditTotal(prayerKey)}
-            className="flex-row items-center gap-1 px-2.5 py-1.5 rounded-full"
-            style={{ backgroundColor: colors.countBox }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="create-outline" size={13} color={colors.textSecondary} />
-            <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
-              {isEmpty ? t.tracker.setTotal : t.tracker.editTotal}
+            <Text className="text-sm font-bold" style={{ color: colors.text }}>
+              {label}
             </Text>
+          </View>
+          <TouchableOpacity onPress={() => onEditTotal(prayerKey)} hitSlop={8}>
+            <Ionicons name="create-outline" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         {isEmpty ? (
-          // empty state — prompt to set a total
           <TouchableOpacity
             onPress={() => onEditTotal(prayerKey)}
-            className="items-center py-5 rounded-2xl border border-dashed"
-            style={{ borderColor: colors.border }}
+            className="items-center justify-center py-6 rounded-2xl border border-dashed"
+            style={{ borderColor: isAyat ? colors.ayatAccent + "66" : colors.border }}
             activeOpacity={0.7}
           >
-            <Ionicons name="add-circle-outline" size={26} color={accentColor} />
-            <Text className="text-sm mt-1.5" style={{ color: colors.textSecondary }}>
+            <Ionicons name="add-circle-outline" size={24} color={accent} />
+            <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
               {t.tracker.setTotal}
             </Text>
           </TouchableOpacity>
         ) : (
           <>
-            {/* big numbers */}
-            <View
-              className="flex-row items-end justify-between mb-2.5"
-              style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
-            >
-              <View style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
-                <Text
-                  className="text-4xl font-extrabold"
-                  style={{ color: isDone ? colors.success : colors.text }}
-                >
-                  {isDone ? "✓" : left}
-                </Text>
-                <Text className="text-xs mt-0.5" style={{ color: colors.textMuted }}>
-                  {isDone ? t.tracker.progressDone : t.tracker.remaining}
-                </Text>
-              </View>
-              <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
-                {progress.completed} {t.tracker.of} {progress.missed} {t.tracker.madeUp}
+            {/* numbers */}
+            <View className="items-center mb-2">
+              <Text
+                className="text-3xl font-extrabold"
+                style={{ color: isDone ? colors.success : colors.text }}
+              >
+                {isDone ? "✓" : left}
+              </Text>
+              <Text className="text-[10px]" style={{ color: colors.textMuted }}>
+                {isDone
+                  ? t.tracker.progressDone
+                  : `${progress.completed} ${t.tracker.of} ${progress.missed} ${t.tracker.madeUp}`}
               </Text>
             </View>
 
-            {/* progress bar */}
             <ProgressBar
               pct={pct}
-              color={isDone ? colors.success : accentColor}
+              color={isDone ? colors.success : accent}
               track={colors.progressTrack}
+              height={6}
             />
-
-            {/* feedback line */}
-            {feedback.type && (
-              <Animated.View
-                className="flex-row items-center gap-1.5 mt-2.5"
-                style={{
-                  flexDirection: isRTL ? "row-reverse" : "row",
-                  opacity: flash,
-                }}
-              >
-                <Ionicons
-                  name={feedback.type === "good" ? "sparkles" : "water-outline"}
-                  size={14}
-                  color={feedback.type === "good" ? colors.successText : colors.dangerText}
-                />
-                <Text
-                  className="text-xs font-semibold flex-1"
-                  style={{
-                    color: feedback.type === "good" ? colors.successText : colors.dangerText,
-                    textAlign: isRTL ? "right" : "left",
-                  }}
-                >
-                  {feedback.text}
-                </Text>
-              </Animated.View>
-            )}
 
             {/* actions */}
             <View
-              className="flex-row items-center gap-2.5 mt-4"
+              className="flex-row items-center justify-between mt-3 gap-1.5"
               style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
             >
               <TouchableOpacity
-                className="flex-1 flex-row items-center justify-center gap-1.5 py-3 rounded-2xl"
-                style={{ backgroundColor: isDone ? colors.countBox : accentColor, opacity: isDone ? 0.6 : 1 }}
+                className="w-9 h-9 rounded-xl items-center justify-center border"
+                style={{ borderColor: colors.danger + "88", backgroundColor: colors.dangerBg }}
+                onPress={handleMissed}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="sad-outline" size={16} color={colors.dangerText} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 h-9 rounded-xl items-center justify-center flex-row gap-1"
+                style={{
+                  backgroundColor: isDone ? colors.countBox : accent,
+                  opacity: isDone ? 0.55 : 1,
+                }}
                 onPress={handlePrayed}
                 disabled={isDone}
                 activeOpacity={0.85}
               >
                 <Ionicons
-                  name="checkmark-circle"
-                  size={18}
+                  name="checkmark"
+                  size={17}
                   color={isDone ? colors.textMuted : colors.addBtnText}
                 />
-                <Text
-                  className="text-sm font-bold"
-                  style={{ color: isDone ? colors.textMuted : colors.addBtnText }}
-                >
-                  {t.tracker.prayedOne}
-                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="flex-row items-center justify-center gap-1.5 px-4 py-3 rounded-2xl border"
-                style={{ borderColor: colors.danger, backgroundColor: colors.dangerBg }}
-                onPress={handleMissed}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="sad-outline" size={17} color={colors.dangerText} />
-                <Text className="text-sm font-semibold" style={{ color: colors.dangerText }}>
-                  {t.tracker.missedDay}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className="w-11 h-11 rounded-2xl items-center justify-center border"
+                className="w-9 h-9 rounded-xl items-center justify-center border"
                 style={{ borderColor: colors.border, backgroundColor: colors.countBox }}
                 onPress={handleReset}
                 activeOpacity={0.7}
               >
-                <Ionicons name="refresh" size={17} color={colors.textSecondary} />
+                <Ionicons name="refresh" size={15} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           </>
         )}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
-// ─── Set-total modal ─────────────────────────────────────────────────────────
+// ─── Set-total modal with steppers ───────────────────────────────────────────
 function SetTotalModal({
   visibleKey,
   label,
@@ -370,6 +303,16 @@ function SetTotalModal({
   useEffect(() => {
     setVal(String(initial));
   }, [initial, visibleKey]);
+
+  const bump = useCallback(
+    (delta: number) => {
+      const parsed = parseInt(val, 10);
+      const next = Math.max(0, (isNaN(parsed) ? 0 : parsed) + delta);
+      setVal(String(next));
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    [val],
+  );
 
   const save = () => {
     const parsed = parseInt(val, 10);
@@ -406,20 +349,40 @@ function SetTotalModal({
             {t.tracker.setTotalMsg}
           </Text>
 
-          <TextInput
-            className="h-14 rounded-2xl text-center text-2xl font-bold border mb-5"
-            style={{
-              backgroundColor: colors.countBox,
-              borderColor: colors.border,
-              color: colors.countBoxText,
-            }}
-            value={val}
-            onChangeText={setVal}
-            keyboardType="number-pad"
-            maxLength={5}
-            selectTextOnFocus
-            autoFocus
-          />
+          {/* stepper input */}
+          <View className="flex-row items-center gap-3 mb-5">
+            <TouchableOpacity
+              className="w-12 h-14 rounded-2xl items-center justify-center border"
+              style={{ backgroundColor: colors.countBox, borderColor: colors.border }}
+              onPress={() => bump(-1)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="remove" size={22} color={colors.text} />
+            </TouchableOpacity>
+
+            <TextInput
+              className="flex-1 h-14 rounded-2xl text-center text-2xl font-bold border"
+              style={{
+                backgroundColor: colors.countBox,
+                borderColor: colors.border,
+                color: colors.countBoxText,
+              }}
+              value={val}
+              onChangeText={setVal}
+              keyboardType="number-pad"
+              maxLength={5}
+              selectTextOnFocus
+            />
+
+            <TouchableOpacity
+              className="w-12 h-14 rounded-2xl items-center justify-center"
+              style={{ backgroundColor: colors.tint }}
+              onPress={() => bump(1)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={22} color={colors.addBtnText} />
+            </TouchableOpacity>
+          </View>
 
           <View className="flex-row gap-3" style={{ flexDirection: isRTL ? "row-reverse" : "row" }}>
             <TouchableOpacity
@@ -450,14 +413,6 @@ function SetTotalModal({
 }
 
 // ─── Main screen ─────────────────────────────────────────────────────────────
-const PRAYER_ICONS: Record<string, React.ComponentProps<typeof Ionicons>["name"]> = {
-  fajr: "partly-sunny-outline",
-  dhuhr: "sunny-outline",
-  asr: "cloudy-outline",
-  maghrib: "moon-outline",
-  isha: "star-outline",
-};
-
 export default function TrackerScreen() {
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
@@ -476,99 +431,96 @@ export default function TrackerScreen() {
     [t],
   );
 
+  const gridKeys: TrackerKey[] = ["fajr", "dhuhr", "asr", "maghrib", "isha", "ayat"];
+
   return (
-    <SafeAreaView className="flex-1" edges={["top", "left", "right"]} style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      className="flex-1"
+      edges={["top", "left", "right"]}
+      style={{ backgroundColor: colors.background }}
+    >
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, paddingTop: 8 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, paddingTop: 10 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* header */}
-        <View className="items-center py-4 gap-1">
-          <Ionicons name="timer-outline" size={26} color={colors.headerTitle} />
-          <Text
-            className="text-2xl font-bold tracking-wide mt-1"
-            style={{ color: colors.headerTitle, textAlign: "center" }}
-          >
-            {t.tracker.title}
-          </Text>
-          <Text className="text-xs" style={{ color: colors.textSecondary, textAlign: "center" }}>
-            {t.tracker.subtitle}
-          </Text>
-        </View>
-
-        {/* overall summary card */}
+        {/* header: logo (start) · title (center) · progress square (end) */}
         <View
-          className="rounded-3xl p-5 mb-5 border"
-          style={{
-            backgroundColor: totalRemaining === 0 ? colors.successBg : colors.totalBadgeBg,
-            borderColor: totalRemaining === 0 ? colors.success : colors.border,
-          }}
+          className="flex-row items-center mb-5"
+          style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
         >
-          {totalRemaining === 0 && grandTotal > 0 ? (
-            <View className="items-center gap-1">
-              <Text className="text-base font-bold" style={{ color: colors.successText }}>
-                {t.tracker.allClear}
-              </Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                {t.tracker.allClearSub}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <View
-                className="flex-row items-center justify-between mb-2.5"
-                style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
-              >
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                  {t.tracker.total}
-                </Text>
-                <Text className="text-2xl font-extrabold" style={{ color: colors.tint }}>
+          <YaqeenLogoBox size={52} />
+
+          <View className="flex-1 items-center px-2">
+            <Text
+              className="text-xl font-bold tracking-wide"
+              style={{ color: colors.headerTitle, textAlign: "center" }}
+            >
+              {t.tracker.title}
+            </Text>
+            <Text
+              className="text-[10px] mt-0.5"
+              style={{ color: colors.textSecondary, textAlign: "center" }}
+            >
+              {t.tracker.subtitle}
+            </Text>
+          </View>
+
+          {/* overall progress square */}
+          <View
+            className="rounded-2xl border items-center justify-center px-2"
+            style={{
+              width: 64,
+              height: 64,
+              backgroundColor: totalRemaining === 0 && grandTotal > 0 ? colors.successBg : colors.card,
+              borderColor: totalRemaining === 0 && grandTotal > 0 ? colors.success : colors.border,
+            }}
+          >
+            {totalRemaining === 0 && grandTotal > 0 ? (
+              <Ionicons name="checkmark-done" size={26} color={colors.success} />
+            ) : (
+              <>
+                <Text
+                  className="text-lg font-extrabold"
+                  style={{ color: colors.tint }}
+                  numberOfLines={1}
+                >
                   {totalRemaining}
                 </Text>
-              </View>
-              <ProgressBar pct={overallPct} color={colors.tint} track={colors.progressTrack} />
-              {grandTotal > 0 && (
-                <Text
-                  className="text-xs mt-2"
-                  style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
-                >
-                  {totalCompleted} {t.tracker.of} {grandTotal} {t.tracker.madeUp}
+                <View className="w-full mt-1">
+                  <ProgressBar
+                    pct={overallPct}
+                    color={colors.tint}
+                    track={colors.progressTrack}
+                    height={4}
+                  />
+                </View>
+                <Text className="text-[8px] mt-0.5" style={{ color: colors.textMuted }}>
+                  {t.tracker.total}
                 </Text>
-              )}
-            </>
-          )}
+              </>
+            )}
+          </View>
         </View>
 
-        {/* daily prayers */}
-        {t.trackerPrayers.map((p) => (
-          <PrayerCard
-            key={p.key}
-            prayerKey={p.key}
-            label={p.label}
-            arabic={p.arabic}
-            icon={PRAYER_ICONS[p.key]}
-            onEditTotal={setEditingKey}
-          />
-        ))}
-
-        {/* Salat al-Ayat */}
-        <Text
-          className="text-xs font-bold uppercase tracking-wider mt-3 mb-2.5 px-1"
-          style={{ color: colors.textMuted, textAlign: isRTL ? "right" : "left" }}
+        {/* 2-column square grid */}
+        <View
+          className="flex-row flex-wrap"
+          style={{
+            flexDirection: isRTL ? "row-reverse" : "row",
+            justifyContent: "space-between",
+            rowGap: 12,
+          }}
         >
-          {t.tracker.ayatSection}
-        </Text>
-        <PrayerCard
-          prayerKey="ayat"
-          label={t.tracker.ayatTitle}
-          arabic={t.tracker.ayatArabic}
-          description={t.tracker.ayatDesc}
-          icon="planet-outline"
-          accent={colors.ayatAccent}
-          bg={colors.ayatBg}
-          onEditTotal={setEditingKey}
-        />
+          {gridKeys.map((key) => (
+            <PrayerCard
+              key={key}
+              prayerKey={key}
+              label={labelFor(key)}
+              onEditTotal={setEditingKey}
+            />
+          ))}
+        </View>
       </ScrollView>
 
       <SetTotalModal

@@ -36,12 +36,15 @@ const TRACKER_KEYS: TrackerKey[] = [
 
 export const DEFAULT_SETTINGS: AppSettings = {
   isDarkMode: true,
+  themeMode: "dark",
   prayerNotifications: true,
   sound: true,
   vibration: false,
   motivation: true,
   quranDaily: true,
   pinnedTimes: true,
+  showAsrIsha: true,
+  showSunEvents: true,
   locationId: DEFAULT_LOCATION_ID,
 };
 

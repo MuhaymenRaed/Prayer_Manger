@@ -1,10 +1,12 @@
-import { Stack } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stack, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LogBox } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
+import { DialogProvider } from "../components/AppDialog";
 import { CloudSync } from "../components/CloudSync";
 import { NotificationManager } from "../components/NotificationManager";
 import { AuthProvider } from "../contexts/AuthContext";
@@ -22,24 +24,40 @@ LogBox.ignoreLogs([
   "`expo-notifications` functionality is not fully supported in Expo Go",
 ]);
 
+const ONBOARDED_KEY = "@yaqeen_onboarded";
+
 export const unstable_settings = {
   anchor: "(tabs)",
 };
 
 function RootLayoutNav() {
   const { isDarkMode } = useTheme();
+  const router = useRouter();
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     requestNotificationPermissions();
   }, []);
 
+  // First-launch onboarding gate (language + theme choice).
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDED_KEY).then((v) => {
+      if (!v) {
+        // Defer until after the first render so the router is mounted.
+        setTimeout(() => router.replace("/onboarding" as Href), 0);
+      }
+      setChecked(true);
+    });
+  }, [router]);
+
   return (
     <>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
-      <NotificationManager />
+      {checked && <NotificationManager />}
       <CloudSync />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="auth/reset" options={{ headerShown: false }} />
         <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" options={{ headerShown: false }} />
@@ -55,7 +73,9 @@ export default function RootLayout() {
         <SettingsProvider>
           <TrackerProvider>
             <AuthProvider>
-              <RootLayoutNav />
+              <DialogProvider>
+                <RootLayoutNav />
+              </DialogProvider>
             </AuthProvider>
           </TrackerProvider>
         </SettingsProvider>

@@ -144,6 +144,9 @@ export async function scheduleMotivationNotification(
     : messages.regressBody(totalRemaining);
 
   await Notifications.scheduleNotificationAsync({
+    // Fixed identifier: rescheduling (e.g. after a language switch) replaces
+    // the previous one instead of stacking a duplicate in the old language.
+    identifier: "daily-motivation",
     content: { title, body, sound: false, data: { kind: "motivation" as Kind } },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -167,6 +170,8 @@ export async function scheduleQuranNotification(
   const ref = lang === "ar" ? verse.refAr : verse.refEn;
 
   await Notifications.scheduleNotificationAsync({
+    // Fixed identifier — prevents EN + AR duplicates after language changes.
+    identifier: "daily-quran",
     content: {
       title: format.quranTitle,
       body: format.quranBody(text, ref),

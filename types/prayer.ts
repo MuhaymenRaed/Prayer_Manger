@@ -41,8 +41,12 @@ export interface TrackerCounts {
 
 export type TrackerKey = keyof TrackerCounts;
 
+export type ThemeMode = "light" | "dark" | "system";
+
 export interface AppSettings {
   isDarkMode: boolean;
+  /** Explicit light/dark or follow the device. */
+  themeMode: ThemeMode;
   prayerNotifications: boolean;
   sound: boolean;
   vibration: boolean;
@@ -52,6 +56,10 @@ export interface AppSettings {
   quranDaily: boolean;
   /** Persistent notification pinned with today's prayer times. */
   pinnedTimes: boolean;
+  /** Show Asr & Isha rows on the prayer-times page. */
+  showAsrIsha: boolean;
+  /** Show Sunrise / Sunset / Midnight reference rows. */
+  showSunEvents: boolean;
   /** id of the manually selected location, or "auto" for GPS. */
   locationId: string;
 }

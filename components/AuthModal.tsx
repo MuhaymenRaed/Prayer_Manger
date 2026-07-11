@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -17,6 +16,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { useDialog } from "./AppDialog";
 
 type Mode = "signin" | "signup" | "forgot";
 
@@ -31,6 +31,7 @@ export function AuthModal({
 }) {
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
+  const dialog = useDialog();
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } =
     useAuth();
 
@@ -58,8 +59,16 @@ export function AuthModal({
         : a.subtitleForgot;
 
   const fail = useCallback(
-    (msg: string) => Alert.alert(a.errorTitle, msg),
-    [a.errorTitle],
+    (msg: string) => {
+      // PKCE double-redeem race: another handler already completed the
+      // sign-in ("invalid flow state"). Nothing is wrong — stay silent.
+      if (/flow[_ ]state/i.test(msg)) {
+        onClose();
+        return;
+      }
+      dialog.show({ title: a.errorTitle, message: msg, icon: "alert-circle-outline" });
+    },
+    [a.errorTitle, dialog, onClose],
   );
 
   const handleSubmit = useCallback(async () => {
@@ -69,7 +78,7 @@ export function AuthModal({
       setBusy(true);
       try {
         await resetPassword(mail);
-        Alert.alert(a.resetSentTitle, a.resetSentMsg);
+        dialog.show({ title: a.resetSentTitle, message: a.resetSentMsg, icon: "mail-unread-outline" });
         setMode("signin");
       } catch (e: unknown) {
         fail(e instanceof Error ? e.message : String(e));
@@ -95,14 +104,18 @@ export function AuthModal({
         );
         if (alreadyRegistered) {
           // Existing account — send the user to sign in (email kept filled).
-          Alert.alert(a.alreadyRegisteredTitle, a.alreadyRegisteredMsg);
+          dialog.show({
+            title: a.alreadyRegisteredTitle,
+            message: a.alreadyRegisteredMsg,
+            icon: "person-circle-outline",
+          });
           setPassword("");
           setConfirm("");
           setMode("signin");
           return;
         }
         if (needsConfirm) {
-          Alert.alert(a.titleSignUp, a.checkEmail);
+          dialog.show({ title: a.titleSignUp, message: a.checkEmail, icon: "mail-unread-outline" });
         }
       } else {
         await signInWithEmail(mail, password);
@@ -113,7 +126,7 @@ export function AuthModal({
     } finally {
       setBusy(false);
     }
-  }, [mode, email, password, confirm, name, a, fail, resetPassword, signUpWithEmail, signInWithEmail, onClose]);
+  }, [mode, email, password, confirm, name, a, fail, dialog, resetPassword, signUpWithEmail, signInWithEmail, onClose]);
 
   const handleGoogle = useCallback(async () => {
     setBusy(true);

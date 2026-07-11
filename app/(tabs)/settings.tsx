@@ -5,7 +5,6 @@ import * as Location from "expo-location";
 import type { User } from "@supabase/supabase-js";
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
   Linking,
   Modal,
   ScrollView,
@@ -16,7 +15,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useDialog } from "../../components/AppDialog";
 import { AuthModal } from "../../components/AuthModal";
+import { YaqeenLogoBox } from "../../components/YaqeenLogo";
 import {
   getLocationById,
   groupedLocations,
@@ -398,11 +399,17 @@ export default function SettingsScreen() {
   } = useSettings();
   const { t, isRTL, lang, toggleLanguage } = useLanguage();
   const { user, signOut, configured } = useAuth();
+  const dialog = useDialog();
   const [updatingLocation, setUpdatingLocation] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [authVisible, setAuthVisible] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [privacyVisible, setPrivacyVisible] = useState(false);
+  const [aboutVisible, setAboutVisible] = useState(false);
+
+  const SUPPORT_EMAIL = "yaqeenal3lm@gmail.com";
+  const SUPPORT_PHONE = "9647712777210";
+  const INSTAGRAM_URL = "https://www.instagram.com/theyaqeen.iq";
 
   const selectedCityName =
     settings.locationId === "auto"
@@ -455,7 +462,11 @@ export default function SettingsScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(t.settings.locPermission, t.settings.locPermissionMsg);
+        dialog.show({
+          title: t.settings.locPermission,
+          message: t.settings.locPermissionMsg,
+          icon: "location-outline",
+        });
         return;
       }
       const position = await Location.getCurrentPositionAsync({
@@ -475,7 +486,11 @@ export default function SettingsScreen() {
       const loc: SavedLocation = { latitude, longitude, displayName: name };
       await saveLocation(loc);
       await updateSetting("locationId", "auto");
-      Alert.alert(t.settings.locUpdated, t.settings.locUpdatedMsg(name));
+      dialog.show({
+        title: t.settings.locUpdated,
+        message: t.settings.locUpdatedMsg(name),
+        icon: "location",
+      });
     } catch {
       const fallback: SavedLocation = {
         latitude: DEFAULT_LAT,
@@ -483,22 +498,30 @@ export default function SettingsScreen() {
         displayName: t.prayerTimes.najaf,
       };
       await saveLocation(fallback);
-      Alert.alert(t.settings.locError, t.settings.locErrorMsg);
+      dialog.show({
+        title: t.settings.locError,
+        message: t.settings.locErrorMsg,
+        icon: "location-outline",
+      });
     } finally {
       setUpdatingLocation(false);
     }
-  }, [t, updateSetting]);
+  }, [t, updateSetting, dialog]);
 
   const openAuth = useCallback(
     (mode: "signin" | "signup") => {
       if (!configured) {
-        Alert.alert(t.settings.comingSoon, t.settings.comingSoonMsg);
+        dialog.show({
+          title: t.settings.comingSoon,
+          message: t.settings.comingSoonMsg,
+          icon: "time-outline",
+        });
         return;
       }
       setAuthMode(mode);
       setAuthVisible(true);
     },
-    [configured, t],
+    [configured, t, dialog],
   );
 
   const handleSignUp = useCallback(() => openAuth("signup"), [openAuth]);
@@ -511,9 +534,58 @@ export default function SettingsScreen() {
     setPrivacyVisible(true);
   }, []);
 
-  const handleSupport = useCallback(() => {
-    Linking.openURL("mailto:moheamin852@gmail.com").catch(() => {});
+  const handleAboutUs = useCallback(() => {
+    setAboutVisible(true);
   }, []);
+
+  const openInstagram = useCallback(() => {
+    // Try the Instagram app first, fall back to the browser.
+    Linking.openURL("instagram://user?username=theyaqeen.iq").catch(() =>
+      Linking.openURL(INSTAGRAM_URL).catch(() => {}),
+    );
+  }, [INSTAGRAM_URL]);
+
+  const openPhone = useCallback(() => {
+    dialog.show({
+      title: t.settings.contactUs,
+      message: `+${SUPPORT_PHONE}`,
+      icon: "chatbubbles-outline",
+      buttons: [
+        {
+          text: t.settings.contactWhatsApp,
+          onPress: () =>
+            Linking.openURL(`https://wa.me/${SUPPORT_PHONE}`).catch(() => {}),
+        },
+        {
+          text: t.settings.contactTelegram,
+          onPress: () =>
+            Linking.openURL(`https://t.me/+${SUPPORT_PHONE}`).catch(() => {}),
+        },
+        { text: t.tracker.cancel, style: "cancel" },
+      ],
+    });
+  }, [dialog, t, SUPPORT_PHONE]);
+
+  const handleSupport = useCallback(() => {
+    dialog.show({
+      title: t.settings.supportTitle,
+      message: t.settings.supportMsg,
+      icon: "help-buoy-outline",
+      buttons: [
+        {
+          text: t.settings.contactEmail,
+          onPress: () =>
+            Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {}),
+        },
+        {
+          text: t.settings.contactWhatsApp,
+          onPress: () =>
+            Linking.openURL(`https://wa.me/${SUPPORT_PHONE}`).catch(() => {}),
+        },
+        { text: t.tracker.cancel, style: "cancel" },
+      ],
+    });
+  }, [dialog, t, SUPPORT_EMAIL, SUPPORT_PHONE]);
 
   return (
     <SafeAreaView
@@ -536,6 +608,112 @@ export default function SettingsScreen() {
         initialMode={authMode}
         onClose={() => setAuthVisible(false)}
       />
+      {/* About Us modal */}
+      <Modal
+        visible={aboutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAboutVisible(false)}
+      >
+        <View
+          className="flex-1 items-center justify-center px-6"
+          style={{ backgroundColor: colors.overlay }}
+        >
+          <View
+            className="w-full rounded-3xl p-6"
+            style={{ backgroundColor: colors.card, maxHeight: "85%" }}
+          >
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+              <View className="items-center mb-4">
+                <YaqeenLogoBox size={64} />
+                <Text className="text-xl font-bold mt-3" style={{ color: colors.text }}>
+                  {t.settings.aboutUsTitle}
+                </Text>
+              </View>
+
+              <Text
+                className="text-sm leading-6 mb-5"
+                style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+              >
+                {t.settings.aboutUsBody}
+              </Text>
+
+              {/* Instagram */}
+              <TouchableOpacity
+                className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border mb-2.5"
+                style={{ borderColor: colors.border, backgroundColor: colors.settingRow, flexDirection: isRTL ? "row-reverse" : "row" }}
+                onPress={openInstagram}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="logo-instagram" size={20} color="#E1306C" />
+                <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
+                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                    {t.settings.followInstagram}
+                  </Text>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                    {t.settings.instagramHandle}
+                  </Text>
+                </View>
+                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              {/* Phone (WhatsApp / Telegram) */}
+              <TouchableOpacity
+                className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border mb-2.5"
+                style={{ borderColor: colors.border, backgroundColor: colors.settingRow, flexDirection: isRTL ? "row-reverse" : "row" }}
+                onPress={openPhone}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="chatbubbles-outline" size={20} color={colors.tint} />
+                <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
+                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                    {t.settings.contactUs}
+                  </Text>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                    +964 771 277 7210
+                  </Text>
+                </View>
+                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              {/* Email */}
+              <TouchableOpacity
+                className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border"
+                style={{ borderColor: colors.border, backgroundColor: colors.settingRow, flexDirection: isRTL ? "row-reverse" : "row" }}
+                onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="mail-outline" size={20} color={colors.tint} />
+                <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
+                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                    {t.settings.contactEmail}
+                  </Text>
+                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                    {SUPPORT_EMAIL}
+                  </Text>
+                </View>
+                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <Text className="text-xs text-center mt-5" style={{ color: colors.textMuted }}>
+                {t.settings.developedBy}
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              className="mt-4 py-3 rounded-2xl items-center"
+              style={{ backgroundColor: colors.tint }}
+              onPress={() => setAboutVisible(false)}
+              activeOpacity={0.85}
+            >
+              <Text className="text-sm font-bold" style={{ color: colors.addBtnText }}>
+                {t.settings.ok}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Privacy policy modal */}
       <Modal
         visible={privacyVisible}
@@ -753,6 +931,32 @@ export default function SettingsScreen() {
           />
         </Section>
 
+        {/* Prayer-times display */}
+        <Section
+          icon="eye-outline"
+          title={t.settings.display}
+          colors={colors}
+          isRTL={isRTL}
+        >
+          <ToggleRow
+            label={t.settings.showAsrIsha}
+            description={t.settings.showAsrIshaDesc}
+            value={settings.showAsrIsha}
+            onToggle={() => updateSetting("showAsrIsha", !settings.showAsrIsha)}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <ToggleRow
+            label={t.settings.showSunEvents}
+            description={t.settings.showSunEventsDesc}
+            value={settings.showSunEvents}
+            onToggle={() => updateSetting("showSunEvents", !settings.showSunEvents)}
+            colors={colors}
+            isRTL={isRTL}
+            isLast
+          />
+        </Section>
+
         {/* Account */}
         <Section
           icon="person-outline"
@@ -839,7 +1043,17 @@ export default function SettingsScreen() {
             >
               {t.settings.tagline}
             </Text>
-            <View className="flex-row gap-3 mt-2">
+            <View className="flex-row flex-wrap justify-center gap-3 mt-2">
+              <TouchableOpacity
+                className="border rounded-lg px-4 py-2"
+                style={{ borderColor: colors.tint }}
+                onPress={handleAboutUs}
+                activeOpacity={0.75}
+              >
+                <Text className="text-xs font-semibold" style={{ color: colors.tint }}>
+                  {t.settings.aboutUs}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 className="border rounded-lg px-4 py-2"
                 style={{ borderColor: colors.border }}

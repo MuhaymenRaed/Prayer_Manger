@@ -28,7 +28,8 @@ export default function AuthCallbackScreen() {
           await supabase.auth.exchangeCodeForSession(code).catch(() => {});
         }
       }
-      router.replace("/(tabs)");
+      // Land on Settings, where the account card confirms the sign-in.
+      router.replace("/(tabs)/settings");
     })();
   }, [code, router]);
 
