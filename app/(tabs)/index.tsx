@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useDialog } from "../../components/AppDialog";
+import { QadhaCalculator } from "../../components/QadhaCalculator";
 import { YaqeenLogoBox } from "../../components/YaqeenLogo";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -521,6 +522,9 @@ export default function TrackerScreen() {
             />
           ))}
         </View>
+
+        {/* shar'i qadha calculator (أقل المتيقّن) */}
+        <QadhaCalculator />
       </ScrollView>
 
       <SetTotalModal

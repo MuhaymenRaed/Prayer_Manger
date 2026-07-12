@@ -408,7 +408,7 @@ export default function SettingsScreen() {
   const [aboutVisible, setAboutVisible] = useState(false);
 
   const SUPPORT_EMAIL = "yaqeenal3lm@gmail.com";
-  const SUPPORT_PHONE = "9647712777210";
+  const SUPPORT_PHONE = "9647778742041";
   const INSTAGRAM_URL = "https://www.instagram.com/theyaqeen.iq";
 
   const selectedCityName =
@@ -670,7 +670,7 @@ export default function SettingsScreen() {
                     {t.settings.contactUs}
                   </Text>
                   <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                    +964 771 277 7210
+                    +964 777 874 2041
                   </Text>
                 </View>
                 <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />

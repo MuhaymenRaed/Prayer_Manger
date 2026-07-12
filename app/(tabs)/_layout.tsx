@@ -77,17 +77,18 @@ export default function TabLayout() {
       }}
     >
       {/*
-        Desired VISUAL order (left → right on screen):
-          • English: Settings → Prayer Times → Tracker
-          • Arabic:  Tracker → Prayer Times → Settings (settings at the right)
-        When the OS is in native RTL (Arabic device locale), the tab bar
-        renders children right-to-left, so the definition order must be
-        reversed to land on the same visual result.
+        Standard tab order — the primary tab sits where the eye starts:
+          • English (LTR): Tracker → Prayer Times → Settings (left → right)
+          • Arabic (RTL): mirrored — Tracker on the FAR RIGHT, i.e. visual
+            left → right on screen: Settings → Prayer Times → Tracker.
+        When the OS itself is in native RTL, the tab bar renders children
+        right-to-left, so the definition order is reversed to land on the
+        same visual result.
       */}
       {(() => {
         const visual = isRTL
-          ? ["index", "prayer-times", "settings"]
-          : ["settings", "prayer-times", "index"];
+          ? ["settings", "prayer-times", "index"]
+          : ["index", "prayer-times", "settings"];
         return I18nManager.isRTL ? [...visual].reverse() : visual;
       })().map((name) => (
         <Tabs.Screen

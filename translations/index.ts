@@ -64,6 +64,22 @@ export const T = {
       ayatTitle: "Salat al-Ayat",
       ayatArabic: "صلاة الآيات",
       ayatDesc: "Eclipses, earthquakes & major signs",
+      // Qadha calculator
+      calcTitle: "Qadha Calculator",
+      calcSubtitle: "Estimate the years of missed prayers you owe",
+      calcOpen: "Calculate",
+      calcExplain:
+        "The shar'i method: count the MINIMUM period you are certain about. Example: if you doubt whether you owe 3 or 5 years, take 3 — the certain minimum. The result is approximate, based on the lunar year (≈354 days) and a 30-day month.",
+      calcYears: "Years",
+      calcMonths: "Months",
+      calcDays: "Days",
+      calcTotal: (days: number) => `Total: ${days} days of missed prayers`,
+      calcApply: "Apply to Tracker",
+      calcApplyTitle: "Apply calculation?",
+      calcApplyMsg: (days: number) =>
+        `Each of the five daily prayers will be set to ${days} missed prayers. This replaces the current daily-prayer counts.`,
+      calcApplied: "Tracker updated",
+      calcAppliedMsg: "May Allah make it easy for you to complete them.",
     },
     prayerTimes: {
       title: "Prayer Times",
@@ -138,7 +154,7 @@ export const T = {
       update: "Update",
       updating: "…",
       about: "About",
-      appVersion: "Yaqeen · v1.0.0",
+      appVersion: "Yaqeen · v1.1.0",
       tagline: "Shia Jafari · Built with love for the Muslim community",
       privacy: "Privacy Policy",
       aboutUs: "About Us",
@@ -326,6 +342,22 @@ export const T = {
       ayatTitle: "صلاة الآيات",
       ayatArabic: "صلاة الآيات",
       ayatDesc: "الكسوف والخسوف والزلازل والآيات الكبرى",
+      // حاسبة القضاء
+      calcTitle: "حاسبة القضاء",
+      calcSubtitle: "احسب سنوات الصلوات الفائتة التي في ذمتك",
+      calcOpen: "احسب",
+      calcExplain:
+        "الطريقة الشرعية: احسب أقل مدة متيقّن بها في ذمتك. مثال: إن شككت أن عليك ٣ أو ٥ سنين، فاختر ٣ — الأقل المتيقّن. الحساب تقريبي على أساس السنة الهلالية (≈٣٥٤ يوماً) والشهر (٣٠ يوماً).",
+      calcYears: "سنوات",
+      calcMonths: "أشهر",
+      calcDays: "أيام",
+      calcTotal: (days: number) => `الإجمالي: ${days} يوماً من الصلوات الفائتة`,
+      calcApply: "تطبيق على المتتبع",
+      calcApplyTitle: "تطبيق الحساب؟",
+      calcApplyMsg: (days: number) =>
+        `سيُضبط عداد كل صلاة من الصلوات الخمس على ${days} صلاة فائتة، وسيحل محل الأعداد الحالية للصلوات اليومية.`,
+      calcApplied: "تم تحديث المتتبع",
+      calcAppliedMsg: "يسّر الله لك قضاءها.",
     },
     prayerTimes: {
       title: "أوقات الصلاة",
@@ -401,7 +433,7 @@ export const T = {
       update: "تحديث",
       updating: "…",
       about: "عن التطبيق",
-      appVersion: "يقين · الإصدار 1.0.0",
+      appVersion: "يقين · الإصدار 1.1.0",
       tagline: "المنهج الجعفري الشيعي · صُنع بمحبة للأمة الإسلامية",
       privacy: "سياسة الخصوصية",
       aboutUs: "من نحن",

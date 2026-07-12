@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yaqeen",
     "slug": "PrayerManger",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "yaqeen",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.PrayerManger"
+      "bundleIdentifier": "com.qcode.yaqeen"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.PrayerManger"
+      "package": "com.qcode.yaqeen"
     },
     "web": {
       "output": "static",
@@ -53,7 +53,8 @@
           "enableBackgroundRemoteNotifications": false
         }
       ],
-      "./plugins/withArabicAppName"
+      "./plugins/withArabicAppName",
+      "./plugins/withReleaseSlim"
     ],
     "experiments": {
       "typedRoutes": true,
