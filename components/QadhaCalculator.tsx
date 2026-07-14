@@ -178,7 +178,7 @@ export function QadhaCalculator() {
             style={{ backgroundColor: colors.card, maxHeight: "85%" }}
             onPress={(e) => e.stopPropagation()}
           >
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
               <View
                 className="flex-row items-center gap-2 mb-2"
                 style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
@@ -190,11 +190,24 @@ export function QadhaCalculator() {
               </View>
 
               <Text
-                className="text-xs leading-5 mb-4"
+                className="text-xs leading-5 mb-3"
                 style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
               >
                 {t.tracker.calcExplain}
               </Text>
+
+              {/* ayat is manual-entry only */}
+              <View
+                className="rounded-2xl px-3 py-2.5 mb-4 border"
+                style={{ backgroundColor: colors.ayatBg, borderColor: colors.ayatAccent + "44" }}
+              >
+                <Text
+                  className="text-[11px] leading-4"
+                  style={{ color: colors.ayatAccent, textAlign: isRTL ? "right" : "left" }}
+                >
+                  {t.tracker.calcAyatNote}
+                </Text>
+              </View>
 
               {/* inputs */}
               <View

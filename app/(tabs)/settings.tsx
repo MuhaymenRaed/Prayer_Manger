@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useDialog } from "../../components/AppDialog";
 import { AuthModal } from "../../components/AuthModal";
 import { YaqeenLogoBox } from "../../components/YaqeenLogo";
+import { HAS_ATHAN_AUDIO, MUEZZINS } from "../../constants/athan";
 import {
   getLocationById,
   groupedLocations,
@@ -354,7 +355,7 @@ function LocationPicker({
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false}>
             {/* GPS option */}
             <View style={{ backgroundColor: colors.settingRow }}>
               <Row id="auto" name={t.settings.autoOption} selected={selectedId === "auto"} />
@@ -623,7 +624,7 @@ export default function SettingsScreen() {
             className="w-full rounded-3xl p-6"
             style={{ backgroundColor: colors.card, maxHeight: "85%" }}
           >
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
               <View className="items-center mb-4">
                 <YaqeenLogoBox size={64} />
                 <Text className="text-xl font-bold mt-3" style={{ color: colors.text }}>
@@ -738,7 +739,7 @@ export default function SettingsScreen() {
                 {t.settings.privacyTitle}
               </Text>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
               <Text
                 className="text-sm leading-6"
                 style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
@@ -760,6 +761,8 @@ export default function SettingsScreen() {
         </View>
       </Modal>
       <ScrollView
+        overScrollMode="never"
+        bounces={false}
         className="flex-1"
         contentContainerStyle={{
           paddingHorizontal: 16,
@@ -930,6 +933,83 @@ export default function SettingsScreen() {
             isLast
           />
         </Section>
+
+        {/* Athan sound — appears once licensed recordings are bundled
+            (constants/athan.ts → HAS_ATHAN_AUDIO) */}
+        {HAS_ATHAN_AUDIO && (
+          <Section
+            icon="musical-notes-outline"
+            title={t.settings.athan}
+            colors={colors}
+            isRTL={isRTL}
+          >
+            {(
+              [
+                ["notification", t.settings.athanNotifOnly],
+                ["takbir", t.settings.athanTakbir],
+                ["full", t.settings.athanFull],
+              ] as const
+            ).map(([mode, label], i, arr) => (
+              <TouchableOpacity
+                key={mode}
+                className="flex-row items-center justify-between px-5 py-3.5"
+                style={[
+                  {
+                    backgroundColor: colors.settingRow,
+                    flexDirection: isRTL ? "row-reverse" : "row",
+                  },
+                  i < arr.length - 1 && {
+                    borderBottomWidth: 0.5,
+                    borderBottomColor: colors.separator,
+                  },
+                ]}
+                onPress={() => updateSetting("athanMode", mode)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  className="text-sm"
+                  style={{
+                    color: settings.athanMode === mode ? colors.tint : colors.text,
+                    fontWeight: settings.athanMode === mode ? "700" : "400",
+                  }}
+                >
+                  {label}
+                </Text>
+                {settings.athanMode === mode && (
+                  <Ionicons name="checkmark-circle" size={18} color={colors.tint} />
+                )}
+              </TouchableOpacity>
+            ))}
+            {MUEZZINS.length > 1 && (
+              <View
+                className="px-5 py-3.5 border-t"
+                style={{ backgroundColor: colors.settingRow, borderTopColor: colors.separator }}
+              >
+                <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}>
+                  {t.settings.muezzin}
+                </Text>
+                <View className="flex-row flex-wrap gap-2" style={{ flexDirection: isRTL ? "row-reverse" : "row" }}>
+                  {MUEZZINS.map((m) => (
+                    <TouchableOpacity
+                      key={m.id}
+                      className="px-3 py-1.5 rounded-full border"
+                      style={{
+                        borderColor: settings.muezzinId === m.id ? colors.tint : colors.border,
+                        backgroundColor: settings.muezzinId === m.id ? colors.totalBadgeBg : "transparent",
+                      }}
+                      onPress={() => updateSetting("muezzinId", m.id)}
+                      activeOpacity={0.75}
+                    >
+                      <Text className="text-xs font-semibold" style={{ color: settings.muezzinId === m.id ? colors.tint : colors.textSecondary }}>
+                        {lang === "ar" ? m.nameAr : m.nameEn}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </Section>
+        )}
 
         {/* Prayer-times display */}
         <Section

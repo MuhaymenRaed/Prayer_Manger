@@ -1,5 +1,12 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import {
+  AthanMode,
+  athanChannelId,
+  athanSoundFile,
+  HAS_ATHAN_AUDIO,
+  MUEZZINS,
+} from "../constants/athan";
 import { QuranVerse } from "../constants/quran";
 import { PrayerTimeInfo } from "../types/prayer";
 
@@ -41,6 +48,25 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       importance: Notifications.AndroidImportance.LOW, // silent, no heads-up
       sound: undefined,
     });
+
+    // Athan channels — only once licensed recordings are bundled
+    // (see constants/athan.ts for the activation steps).
+    if (HAS_ATHAN_AUDIO) {
+      for (const muezzin of MUEZZINS) {
+        for (const mode of ["takbir", "full"] as const) {
+          await Notifications.setNotificationChannelAsync(
+            athanChannelId(mode, muezzin.id),
+            {
+              name: `Athan (${mode}) — ${muezzin.nameEn}`,
+              importance: Notifications.AndroidImportance.HIGH,
+              vibrationPattern: [0, 250, 250, 250],
+              lightColor: "#2ECC71",
+              sound: athanSoundFile(mode, muezzin.id),
+            },
+          );
+        }
+      }
+    }
   }
 
   const { status } = await Notifications.requestPermissionsAsync();
@@ -66,11 +92,18 @@ export async function schedulePrayerNotifications(
   prayers: PrayerTimeInfo[],
   withVibration: boolean,
   buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
+  athan?: { mode: AthanMode; muezzinId: string },
 ): Promise<void> {
   // Cancel only previous prayer alerts, preserving motivation/quran ones.
   await cancelByKind("prayer");
 
   const now = new Date();
+
+  // Route to an athan channel only when real audio is bundled.
+  const channelId =
+    HAS_ATHAN_AUDIO && athan && athan.mode !== "notification"
+      ? athanChannelId(athan.mode, athan.muezzinId)
+      : "prayers";
 
   for (const prayer of prayers) {
     if (prayer.isInformational || prayer.isPassed) continue;
@@ -88,7 +121,7 @@ export async function schedulePrayerNotifications(
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: prayer.time,
-        channelId: "prayers",
+        channelId,
       },
     });
   }

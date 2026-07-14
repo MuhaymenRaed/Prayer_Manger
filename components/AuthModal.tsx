@@ -179,7 +179,7 @@ export function AuthModal({
             </Text>
           </View>
 
-          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView overScrollMode="never" bounces={false} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {/* Google (not on the forgot screen) */}
             {mode !== "forgot" && (
               <>

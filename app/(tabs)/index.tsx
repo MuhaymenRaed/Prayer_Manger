@@ -247,7 +247,7 @@ function PrayerCard({
                 onPress={handleMissed}
                 activeOpacity={0.8}
               >
-                <Ionicons name="sad-outline" size={16} color={colors.dangerText} />
+                <Ionicons name="close" size={17} color={colors.dangerText} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -441,6 +441,8 @@ export default function TrackerScreen() {
       style={{ backgroundColor: colors.background }}
     >
       <ScrollView
+        overScrollMode="never"
+        bounces={false}
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, paddingTop: 10 }}
         showsVerticalScrollIndicator={false}

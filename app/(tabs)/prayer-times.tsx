@@ -228,13 +228,18 @@ export default function PrayerTimesScreen() {
       }
 
       // Per-prayer alerts, fully in the app's language (e.g. "صلاة المغرب").
-      schedulePrayerNotifications(prayers, settings.vibration, (p) => {
-        const localized = t.athanNames[p.name] ?? p.name;
-        return {
-          title: t.notif.title(localized),
-          body: t.notif.body(localized, p.arabicName),
-        };
-      }).catch(() => {});
+      schedulePrayerNotifications(
+        prayers,
+        settings.vibration,
+        (p) => {
+          const localized = t.athanNames[p.name] ?? p.name;
+          return {
+            title: t.notif.title(localized),
+            body: t.notif.body(localized, p.arabicName),
+          };
+        },
+        { mode: settings.athanMode, muezzinId: settings.muezzinId },
+      ).catch(() => {});
 
       updatePinned(prayers, tz);
     },
@@ -243,6 +248,8 @@ export default function PrayerTimesScreen() {
       settings.prayerNotifications,
       settings.vibration,
       settings.pinnedTimes,
+      settings.athanMode,
+      settings.muezzinId,
       lang,
       t,
     ],
@@ -404,6 +411,8 @@ export default function PrayerTimesScreen() {
   return (
     <SafeAreaView className="flex-1" edges={["top", "left", "right"]} style={{ backgroundColor: colors.background }}>
       <ScrollView
+        overScrollMode="never"
+        bounces={false}
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 28, paddingTop: 8 }}
         showsVerticalScrollIndicator={false}

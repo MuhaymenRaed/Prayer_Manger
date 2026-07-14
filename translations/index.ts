@@ -70,6 +70,8 @@ export const T = {
       calcOpen: "Calculate",
       calcExplain:
         "The shar'i method: count the MINIMUM period you are certain about. Example: if you doubt whether you owe 3 or 5 years, take 3 — the certain minimum. The result is approximate, based on the lunar year (≈354 days) and a 30-day month.",
+      calcAyatNote:
+        "Note: Salat al-Ayat is NOT included in this calculation — ask about it based on the missed years and enter its count manually in its own card.",
       calcYears: "Years",
       calcMonths: "Months",
       calcDays: "Days",
@@ -127,6 +129,11 @@ export const T = {
       quranDailyDesc: "Receive a verse of the Quran every day",
       pinnedTimes: "Pinned Next Prayer",
       pinnedTimesDesc: "Keep the next prayer pinned in the notification shade",
+      athan: "Athan Sound",
+      athanNotifOnly: "Notification sound only",
+      athanTakbir: "Takbir only (تكبيرة الإحرام)",
+      athanFull: "Full athan",
+      muezzin: "Muezzin",
       display: "Prayer Times Display",
       showAsrIsha: "Show Asr & Isha",
       showAsrIshaDesc: "Hide them if you pray them combined",
@@ -268,7 +275,7 @@ export const T = {
       quranTitle: "Verse of the day",
       quranBody: (verse: string, ref: string) => `${verse}\n— ${ref}`,
       pinnedNext: (name: string, time: string, remaining: string) =>
-        `Next: ${name} · ${time} · in ${remaining}`,
+        `Next prayer: ${name} at ${time}, in ${remaining}`,
     },
     countries: {
       iq: "Iraq",
@@ -348,6 +355,8 @@ export const T = {
       calcOpen: "احسب",
       calcExplain:
         "الطريقة الشرعية: احسب أقل مدة متيقّن بها في ذمتك. مثال: إن شككت أن عليك ٣ أو ٥ سنين، فاختر ٣ — الأقل المتيقّن. الحساب تقريبي على أساس السنة الهلالية (≈٣٥٤ يوماً) والشهر (٣٠ يوماً).",
+      calcAyatNote:
+        "ملاحظة: لا تُحتسب صلاة الآيات ضمن هذه الحاسبة — يُسأل عنها بحسب السنوات الفائتة وتُدخل قيمتها يدوياً في بطاقتها الخاصة.",
       calcYears: "سنوات",
       calcMonths: "أشهر",
       calcDays: "أيام",
@@ -371,7 +380,7 @@ export const T = {
       next: "التالية",
       najaf: "النجف، العراق",
       durationShort: (h: number, m: number) =>
-        h > 0 ? `${h}س ${m}د` : `${m}د`,
+        h > 0 ? `${h} س و ${m} د` : `${m} د`,
     },
     athanNames: {
       Fajr: "الصبح",
@@ -406,6 +415,11 @@ export const T = {
       quranDailyDesc: "استلم آية من القرآن الكريم كل يوم",
       pinnedTimes: "تثبيت الصلاة القادمة",
       pinnedTimesDesc: "إبقاء الصلاة القادمة مثبّتة في شريط الإشعارات",
+      athan: "صوت الأذان",
+      athanNotifOnly: "صوت الإشعار فقط",
+      athanTakbir: "تكبيرة الإحرام فقط",
+      athanFull: "الأذان كاملاً",
+      muezzin: "المؤذن",
       display: "عرض أوقات الصلاة",
       showAsrIsha: "إظهار العصر والعشاء",
       showAsrIshaDesc: "أخفِهما إذا كنت تصلّيهما جمعاً",
@@ -547,7 +561,9 @@ export const T = {
       quranTitle: "آية اليوم",
       quranBody: (verse: string, ref: string) => `${verse}\n— ${ref}`,
       pinnedNext: (name: string, time: string, remaining: string) =>
-        `القادمة: ${name} · ${time} · بعد ${remaining}`,
+        `الصلاة التالية: ${name} عند ${time
+          .replace(/\sص$/, " صباحاً")
+          .replace(/\sم$/, " مساءً")}، بعد ${remaining}`,
     },
     countries: {
       iq: "العراق",

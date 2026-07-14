@@ -45,6 +45,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pinnedTimes: true,
   showAsrIsha: true,
   showSunEvents: true,
+  athanMode: "notification",
+  muezzinId: "default",
   locationId: DEFAULT_LOCATION_ID,
 };
 
