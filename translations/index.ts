@@ -69,7 +69,7 @@ export const T = {
       calcSubtitle: "Estimate the years of missed prayers you owe",
       calcOpen: "Calculate",
       calcExplain:
-        "The shar'i method: count the MINIMUM period you are certain about. Example: if you doubt whether you owe 3 or 5 years, take 3 — the certain minimum. The result is approximate, based on the lunar year (≈354 days) and a 30-day month.",
+        "The shar'i method: count the MINIMUM period you are certain about. Example: if you doubt whether you owe 3 or 5 years, take 3 — the certain minimum. The result is approximate, based on the Gregorian year (365 days) and a 30-day month.",
       calcAyatNote:
         "Note: Salat al-Ayat is NOT included in this calculation — ask about it based on the missed years and enter its count manually in its own card.",
       calcYears: "Years",
@@ -354,7 +354,7 @@ export const T = {
       calcSubtitle: "احسب سنوات الصلوات الفائتة التي في ذمتك",
       calcOpen: "احسب",
       calcExplain:
-        "الطريقة الشرعية: احسب أقل مدة متيقّن بها في ذمتك. مثال: إن شككت أن عليك ٣ أو ٥ سنين، فاختر ٣ — الأقل المتيقّن. الحساب تقريبي على أساس السنة الهلالية (≈٣٥٤ يوماً) والشهر (٣٠ يوماً).",
+        "الطريقة الشرعية: احسب أقل مدة متيقّن بها في ذمتك. مثال: إن شككت أن عليك ٣ أو ٥ سنين، فاختر ٣ — الأقل المتيقّن. الحساب تقريبي على أساس السنة الميلادية (٣٦٥ يوماً) والشهر (٣٠ يوماً).",
       calcAyatNote:
         "ملاحظة: لا تُحتسب صلاة الآيات ضمن هذه الحاسبة — يُسأل عنها بحسب السنوات الفائتة وتُدخل قيمتها يدوياً في بطاقتها الخاصة.",
       calcYears: "سنوات",

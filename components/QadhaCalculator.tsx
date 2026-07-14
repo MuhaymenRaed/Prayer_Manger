@@ -17,7 +17,8 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useTracker } from "../contexts/TrackerContext";
 import { TrackerCounts, TrackerKey } from "../types/prayer";
 
-const LUNAR_YEAR_DAYS = 354;
+// Gregorian calendar basis: 365-day year, 30-day month.
+const YEAR_DAYS = 365;
 const MONTH_DAYS = 30;
 const DAILY_PRAYERS: TrackerKey[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
@@ -89,7 +90,7 @@ export function QadhaCalculator() {
   const [months, setMonths] = useState(0);
   const [days, setDays] = useState(0);
 
-  const totalDays = years * LUNAR_YEAR_DAYS + months * MONTH_DAYS + days;
+  const totalDays = years * YEAR_DAYS + months * MONTH_DAYS + days;
 
   const apply = useCallback(() => {
     dialog.show({
