@@ -22,7 +22,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 import {
   cancelAllNotifications,
   dismissPinnedTimes,
-  schedulePrayerNotifications,
+  scheduleUpcomingPrayerAlerts,
   showPinnedTimes,
 } from "../../services/notificationService";
 import {
@@ -68,15 +68,15 @@ const PrayerRow = React.memo(function PrayerRow({
   prayer,
   isLast,
   timezone,
+  active,
 }: {
   prayer: PrayerTimeInfo;
   isLast: boolean;
   timezone: string;
+  active: boolean;
 }) {
   const { colors } = useTheme();
   const { t, isRTL, lang } = useLanguage();
-
-  const active = prayer.isNext;
   const info = prayer.isInformational;
   const secondary = lang === "ar" ? prayer.name : prayer.arabicName;
 
@@ -227,10 +227,10 @@ export default function PrayerTimesScreen() {
         return;
       }
 
-      // Per-prayer alerts, fully in the app's language (e.g. "صلاة المغرب").
-      schedulePrayerNotifications(
-        prayers,
-        settings.vibration,
+      // A week of per-prayer alerts, fully in the app's language.
+      scheduleUpcomingPrayerAlerts(
+        coordsRef.current.lat,
+        coordsRef.current.lon,
         (p) => {
           const localized = t.athanNames[p.name] ?? p.name;
           return {
@@ -401,7 +401,7 @@ export default function PrayerTimesScreen() {
     setTimeout(() => setRefreshing(false), 600);
   }, []);
 
-  const { prayers, nextPrayer } = result;
+  const { prayers } = result;
 
   // Rows visibility per user settings (display-only; alerts stay complete).
   const visiblePrayers = prayers.filter((p) => {
@@ -414,6 +414,17 @@ export default function PrayerTimesScreen() {
       return false;
     return true;
   });
+
+  // Next prayer for the hero/badge — respects the user's preferences: when
+  // Asr & Isha are hidden (praying jam'), skip them (Dhuhr → Maghrib).
+  const nowMs = today.getTime();
+  const nextPrayer =
+    prayers.find(
+      (p) =>
+        !p.isInformational &&
+        (settings.showAsrIsha || (p.name !== "Asr" && p.name !== "Isha")) &&
+        p.time.getTime() > nowMs,
+    ) ?? null;
 
   // Localized remaining time for the hero (recomputes on each minute tick).
   const minsToNext = nextPrayer
@@ -520,6 +531,7 @@ export default function PrayerTimesScreen() {
                 prayer={prayer}
                 isLast={idx === visiblePrayers.length - 1}
                 timezone={timezone}
+                active={nextPrayer?.name === prayer.name}
               />
             ))}
           </View>

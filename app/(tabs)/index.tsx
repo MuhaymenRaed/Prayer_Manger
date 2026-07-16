@@ -215,14 +215,23 @@ function PrayerCard({
         ) : (
           <>
             {/* numbers */}
-            <View className="items-center mb-2">
+            <View className="items-center mb-2 w-full">
               <Text
-                className="text-3xl font-extrabold"
+                className="text-3xl font-extrabold w-full text-center"
                 style={{ color: isDone ? colors.success : colors.text }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
               >
                 {isDone ? "✓" : left}
               </Text>
-              <Text className="text-[10px]" style={{ color: colors.textMuted }}>
+              <Text
+                className="text-[10px] w-full text-center"
+                style={{ color: colors.textMuted }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
                 {isDone
                   ? t.tracker.progressDone
                   : `${progress.completed} ${t.tracker.of} ${progress.missed} ${t.tracker.madeUp}`}
@@ -473,7 +482,7 @@ export default function TrackerScreen() {
           <View
             className="rounded-2xl border items-center justify-center px-2"
             style={{
-              width: 64,
+              width: 76,
               height: 64,
               backgroundColor: totalRemaining === 0 && grandTotal > 0 ? colors.successBg : colors.card,
               borderColor: totalRemaining === 0 && grandTotal > 0 ? colors.success : colors.border,
@@ -483,10 +492,13 @@ export default function TrackerScreen() {
               <Ionicons name="checkmark-done" size={26} color={colors.success} />
             ) : (
               <>
+                {/* auto-shrinks so the FULL number always fits the square */}
                 <Text
-                  className="text-lg font-extrabold"
-                  style={{ color: colors.tint }}
+                  className="font-extrabold w-full text-center"
+                  style={{ color: colors.tint, fontSize: 19 }}
                   numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.45}
                 >
                   {totalRemaining}
                 </Text>
@@ -498,7 +510,13 @@ export default function TrackerScreen() {
                     height={4}
                   />
                 </View>
-                <Text className="text-[8px] mt-0.5" style={{ color: colors.textMuted }}>
+                <Text
+                  className="text-[8px] mt-0.5 w-full text-center"
+                  style={{ color: colors.textMuted }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >
                   {t.tracker.total}
                 </Text>
               </>

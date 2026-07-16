@@ -9,6 +9,7 @@ import {
 } from "../constants/athan";
 import { QuranVerse } from "../constants/quran";
 import { PrayerTimeInfo } from "../types/prayer";
+import { getShiaPrayerTimes } from "./prayerTimesService";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -24,7 +25,12 @@ type Kind = "prayer" | "motivation" | "quran" | "pinned";
 
 const PINNED_ID = "pinned-daily-times";
 
-export async function requestNotificationPermissions(): Promise<boolean> {
+/**
+ * Create/refresh every Android channel. Idempotent — safe to call before
+ * each scheduling pass so alerts can never be scheduled onto a channel
+ * that does not exist yet (channels are upserts; per-sound ids stay stable).
+ */
+export async function ensureNotificationChannels(): Promise<void> {
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("prayers", {
       name: "Prayer Times",
@@ -66,7 +72,10 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       }
     }
   }
+}
 
+export async function requestNotificationPermissions(): Promise<boolean> {
+  await ensureNotificationChannels();
   const { status } = await Notifications.requestPermissionsAsync();
   return status === "granted";
 }
@@ -92,6 +101,9 @@ export async function schedulePrayerNotifications(
   buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
   athan?: { mode: AthanMode; soundId: string },
 ): Promise<void> {
+  // Channels must exist before anything is scheduled onto them.
+  await ensureNotificationChannels();
+
   // Cancel only previous prayer alerts, preserving motivation/quran ones.
   await cancelByKind("prayer");
 
@@ -125,6 +137,28 @@ export async function schedulePrayerNotifications(
       },
     });
   }
+}
+
+/**
+ * Schedule prayer alerts for the next `days` days in one pass (~35 entries,
+ * safely under iOS's 64-notification cap). Delivery is OS-level: alerts fire
+ * with the selected takbir sound even if the app stays closed for days, and
+ * survive reboots via expo-notifications' BOOT_COMPLETED restore. Each app
+ * open slides the window forward.
+ */
+export async function scheduleUpcomingPrayerAlerts(
+  latitude: number,
+  longitude: number,
+  buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
+  athan?: { mode: AthanMode; soundId: string },
+  days = 7,
+): Promise<void> {
+  const all: PrayerTimeInfo[] = [];
+  for (let i = 0; i < days; i++) {
+    const date = new Date(Date.now() + i * 86400000);
+    all.push(...getShiaPrayerTimes(latitude, longitude, date).prayers);
+  }
+  await schedulePrayerNotifications(all, false, buildContent, athan);
 }
 
 /**
