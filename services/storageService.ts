@@ -45,8 +45,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pinnedTimes: true,
   showAsrIsha: true,
   showSunEvents: true,
-  athanMode: "notification",
-  muezzinId: "default",
+  // Takbir plays with the prayer notification by default (sound 1);
+  // users can switch back to the plain notification tone in Settings.
+  athanMode: "takbir",
+  athanSoundId: "sound1",
   locationId: DEFAULT_LOCATION_ID,
 };
 

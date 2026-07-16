@@ -238,7 +238,7 @@ export default function PrayerTimesScreen() {
             body: t.notif.body(localized, p.arabicName),
           };
         },
-        { mode: settings.athanMode, muezzinId: settings.muezzinId },
+        { mode: settings.athanMode, soundId: settings.athanSoundId },
       ).catch(() => {});
 
       updatePinned(prayers, tz);
@@ -249,7 +249,7 @@ export default function PrayerTimesScreen() {
       settings.vibration,
       settings.pinnedTimes,
       settings.athanMode,
-      settings.muezzinId,
+      settings.athanSoundId,
       lang,
       t,
     ],

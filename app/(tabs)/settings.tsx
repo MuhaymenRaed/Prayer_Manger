@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import type { User } from "@supabase/supabase-js";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Linking,
   Modal,
@@ -15,10 +15,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+
 import { useDialog } from "../../components/AppDialog";
 import { AuthModal } from "../../components/AuthModal";
 import { YaqeenLogoBox } from "../../components/YaqeenLogo";
-import { HAS_ATHAN_AUDIO, MUEZZINS } from "../../constants/athan";
+import {
+  ATHAN_SOUNDS,
+  AthanSoundOption,
+  HAS_ATHAN_AUDIO,
+} from "../../constants/athan";
 import {
   getLocationById,
   groupedLocations,
@@ -411,6 +417,30 @@ export default function SettingsScreen() {
   const SUPPORT_EMAIL = "yaqeenal3lm@gmail.com";
   const SUPPORT_PHONE = "9647778742041";
   const INSTAGRAM_URL = "https://www.instagram.com/theyaqeen.iq";
+
+  // ── athan sound preview ────────────────────────────────────────
+  const player = useAudioPlayer();
+  const playerStatus = useAudioPlayerStatus(player);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (playerStatus.didJustFinish) setPreviewId(null);
+  }, [playerStatus.didJustFinish]);
+
+  const handlePreview = useCallback(
+    (s: AthanSoundOption) => {
+      if (previewId === s.id) {
+        player.pause();
+        setPreviewId(null);
+        return;
+      }
+      player.replace(s.module);
+      player.seekTo(0);
+      player.play();
+      setPreviewId(s.id);
+    },
+    [player, previewId],
+  );
 
   const selectedCityName =
     settings.locationId === "auto"
@@ -934,8 +964,7 @@ export default function SettingsScreen() {
           />
         </Section>
 
-        {/* Athan sound — appears once licensed recordings are bundled
-            (constants/athan.ts → HAS_ATHAN_AUDIO) */}
+        {/* Athan sound */}
         {HAS_ATHAN_AUDIO && (
           <Section
             icon="musical-notes-outline"
@@ -943,68 +972,84 @@ export default function SettingsScreen() {
             colors={colors}
             isRTL={isRTL}
           >
-            {(
-              [
-                ["notification", t.settings.athanNotifOnly],
-                ["takbir", t.settings.athanTakbir],
-                ["full", t.settings.athanFull],
-              ] as const
-            ).map(([mode, label], i, arr) => (
-              <TouchableOpacity
-                key={mode}
-                className="flex-row items-center justify-between px-5 py-3.5"
-                style={[
-                  {
-                    backgroundColor: colors.settingRow,
-                    flexDirection: isRTL ? "row-reverse" : "row",
-                  },
-                  i < arr.length - 1 && {
-                    borderBottomWidth: 0.5,
-                    borderBottomColor: colors.separator,
-                  },
-                ]}
-                onPress={() => updateSetting("athanMode", mode)}
-                activeOpacity={0.7}
+            <ToggleRow
+              label={t.settings.athanEnable}
+              description={t.settings.athanEnableDesc}
+              value={settings.athanMode === "takbir"}
+              onToggle={() =>
+                updateSetting(
+                  "athanMode",
+                  settings.athanMode === "takbir" ? "notification" : "takbir",
+                )
+              }
+              colors={colors}
+              isRTL={isRTL}
+              isLast={settings.athanMode !== "takbir"}
+            />
+            {settings.athanMode === "takbir" && (
+              <View
+                className="px-4 pt-3 pb-4 border-t"
+                style={{
+                  backgroundColor: colors.settingRow,
+                  borderTopColor: colors.separator,
+                }}
               >
                 <Text
-                  className="text-sm"
+                  className="text-xs mb-3"
                   style={{
-                    color: settings.athanMode === mode ? colors.tint : colors.text,
-                    fontWeight: settings.athanMode === mode ? "700" : "400",
+                    color: colors.textSecondary,
+                    textAlign: isRTL ? "right" : "left",
                   }}
                 >
-                  {label}
+                  {t.settings.athanPick}
                 </Text>
-                {settings.athanMode === mode && (
-                  <Ionicons name="checkmark-circle" size={18} color={colors.tint} />
-                )}
-              </TouchableOpacity>
-            ))}
-            {MUEZZINS.length > 1 && (
-              <View
-                className="px-5 py-3.5 border-t"
-                style={{ backgroundColor: colors.settingRow, borderTopColor: colors.separator }}
-              >
-                <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}>
-                  {t.settings.muezzin}
-                </Text>
-                <View className="flex-row flex-wrap gap-2" style={{ flexDirection: isRTL ? "row-reverse" : "row" }}>
-                  {MUEZZINS.map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      className="px-3 py-1.5 rounded-full border"
-                      style={{
-                        borderColor: settings.muezzinId === m.id ? colors.tint : colors.border,
-                        backgroundColor: settings.muezzinId === m.id ? colors.totalBadgeBg : "transparent",
-                      }}
-                      onPress={() => updateSetting("muezzinId", m.id)}
-                      activeOpacity={0.75}
-                    >
-                      <Text className="text-xs font-semibold" style={{ color: settings.muezzinId === m.id ? colors.tint : colors.textSecondary }}>
-                        {lang === "ar" ? m.nameAr : m.nameEn}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                <View
+                  className="flex-row flex-wrap gap-2"
+                  style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
+                >
+                  {ATHAN_SOUNDS.map((s) => {
+                    const selected = settings.athanSoundId === s.id;
+                    const playing = previewId === s.id;
+                    return (
+                      <TouchableOpacity
+                        key={s.id}
+                        className="flex-row items-center gap-1.5 pl-1.5 pr-3 py-1.5 rounded-full border"
+                        style={{
+                          borderColor: selected ? colors.tint : colors.border,
+                          backgroundColor: selected
+                            ? colors.totalBadgeBg
+                            : "transparent",
+                          flexDirection: isRTL ? "row-reverse" : "row",
+                        }}
+                        onPress={() => updateSetting("athanSoundId", s.id)}
+                        activeOpacity={0.75}
+                      >
+                        <TouchableOpacity
+                          className="w-7 h-7 rounded-full items-center justify-center"
+                          style={{
+                            backgroundColor: playing ? colors.tint : colors.countBox,
+                          }}
+                          onPress={() => handlePreview(s)}
+                          hitSlop={6}
+                        >
+                          <Ionicons
+                            name={playing ? "stop" : "play"}
+                            size={12}
+                            color={playing ? colors.addBtnText : colors.tint}
+                          />
+                        </TouchableOpacity>
+                        <Text
+                          className="text-xs font-semibold"
+                          style={{ color: selected ? colors.tint : colors.textSecondary }}
+                        >
+                          {t.settings.soundOption} {s.n}
+                        </Text>
+                        {selected && (
+                          <Ionicons name="checkmark-circle" size={14} color={colors.tint} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             )}

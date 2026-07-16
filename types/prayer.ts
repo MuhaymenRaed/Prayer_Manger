@@ -60,10 +60,10 @@ export interface AppSettings {
   showAsrIsha: boolean;
   /** Show Sunrise / Sunset / Midnight reference rows. */
   showSunEvents: boolean;
-  /** Prayer-time alert sound: default notification, takbir, or full athan. */
-  athanMode: "notification" | "takbir" | "full";
-  /** Selected muezzin id (see constants/athan.ts). */
-  muezzinId: string;
+  /** Prayer-time alert sound: default notification tone or takbir (athan). */
+  athanMode: "notification" | "takbir";
+  /** Selected athan sound id (see constants/athan.ts). */
+  athanSoundId: string;
   /** id of the manually selected location, or "auto" for GPS. */
   locationId: string;
 }

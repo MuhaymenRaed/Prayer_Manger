@@ -2,10 +2,10 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import {
   AthanMode,
+  ATHAN_SOUNDS,
   athanChannelId,
-  athanSoundFile,
+  getAthanSound,
   HAS_ATHAN_AUDIO,
-  MUEZZINS,
 } from "../constants/athan";
 import { QuranVerse } from "../constants/quran";
 import { PrayerTimeInfo } from "../types/prayer";
@@ -49,22 +49,20 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       sound: undefined,
     });
 
-    // Athan channels — only once licensed recordings are bundled
-    // (see constants/athan.ts for the activation steps).
+    // One channel per bundled takbir sound (Android channels are immutable
+    // after creation, so each sound needs its own channel id).
     if (HAS_ATHAN_AUDIO) {
-      for (const muezzin of MUEZZINS) {
-        for (const mode of ["takbir", "full"] as const) {
-          await Notifications.setNotificationChannelAsync(
-            athanChannelId(mode, muezzin.id),
-            {
-              name: `Athan (${mode}) — ${muezzin.nameEn}`,
-              importance: Notifications.AndroidImportance.HIGH,
-              vibrationPattern: [0, 250, 250, 250],
-              lightColor: "#2ECC71",
-              sound: athanSoundFile(mode, muezzin.id),
-            },
-          );
-        }
+      for (const sound of ATHAN_SOUNDS) {
+        await Notifications.setNotificationChannelAsync(
+          athanChannelId("takbir", sound.id),
+          {
+            name: `Prayer Athan ${sound.n}`,
+            importance: Notifications.AndroidImportance.HIGH,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: "#2ECC71",
+            sound: sound.file,
+          },
+        );
       }
     }
   }
@@ -92,18 +90,20 @@ export async function schedulePrayerNotifications(
   prayers: PrayerTimeInfo[],
   withVibration: boolean,
   buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
-  athan?: { mode: AthanMode; muezzinId: string },
+  athan?: { mode: AthanMode; soundId: string },
 ): Promise<void> {
   // Cancel only previous prayer alerts, preserving motivation/quran ones.
   await cancelByKind("prayer");
 
   const now = new Date();
 
-  // Route to an athan channel only when real audio is bundled.
-  const channelId =
-    HAS_ATHAN_AUDIO && athan && athan.mode !== "notification"
-      ? athanChannelId(athan.mode, athan.muezzinId)
-      : "prayers";
+  const useAthan = HAS_ATHAN_AUDIO && athan?.mode === "takbir";
+  // Android: sound comes from the per-sound channel. iOS: per-notification.
+  const channelId = useAthan
+    ? athanChannelId("takbir", athan!.soundId)
+    : "prayers";
+  const iosSound: string | boolean =
+    useAthan && Platform.OS === "ios" ? getAthanSound(athan!.soundId).file : true;
 
   for (const prayer of prayers) {
     if (prayer.isInformational || prayer.isPassed) continue;
@@ -115,7 +115,7 @@ export async function schedulePrayerNotifications(
       content: {
         title,
         body,
-        sound: true,
+        sound: iosSound,
         data: { kind: "prayer" as Kind, prayer: prayer.name },
       },
       trigger: {

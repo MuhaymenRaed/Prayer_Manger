@@ -50,11 +50,34 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#15803D",
           "defaultChannel": "prayers",
-          "enableBackgroundRemoteNotifications": false
+          "enableBackgroundRemoteNotifications": false,
+          "sounds": [
+            "./assets/sounds/sound1.mp3",
+            "./assets/sounds/sound2.mp3",
+            "./assets/sounds/sound3.mp3",
+            "./assets/sounds/sound4.mp3",
+            "./assets/sounds/sound5.mp3",
+            "./assets/sounds/sound6.mp3",
+            "./assets/sounds/sound7.mp3",
+            "./assets/sounds/sound8.mp3",
+            "./assets/sounds/sound9.mp3",
+            "./assets/sounds/sound10.mp3",
+            "./assets/sounds/sound11.mp3",
+            "./assets/sounds/sound12.mp3",
+            "./assets/sounds/sound13.mp3",
+            "./assets/sounds/sound14.mp3",
+            "./assets/sounds/sound15.mp3",
+            "./assets/sounds/sound16.mp3",
+            "./assets/sounds/sound17.mp3",
+            "./assets/sounds/sound18.mp3",
+            "./assets/sounds/sound19.mp3",
+            "./assets/sounds/sound20.mp3"
+          ]
         }
       ],
       "./plugins/withArabicAppName",
-      "./plugins/withReleaseSlim"
+      "./plugins/withReleaseSlim",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,
