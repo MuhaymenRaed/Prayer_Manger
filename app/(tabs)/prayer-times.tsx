@@ -250,19 +250,29 @@ export default function PrayerTimesScreen() {
       settings.pinnedTimes,
       settings.athanMode,
       settings.athanSoundId,
+      settings.showAsrIsha,
       lang,
       t,
     ],
   );
 
   // Pinned bar — elegant single line: only the NEXT prayer + remaining time.
+  // Respects the user's display preferences: prayers hidden from the table
+  // (e.g. Asr & Isha for those praying jam') are skipped, so after Dhuhr the
+  // bar goes straight to Maghrib.
   const updatePinned = useCallback(
     (prayers: PrayerTimeInfo[], tz: string) => {
       if (!settings.prayerNotifications || !settings.pinnedTimes) {
         dismissPinnedTimes().catch(() => {});
         return;
       }
-      const next = prayers.find((p) => p.isNext);
+      const now = Date.now();
+      const next = prayers.find(
+        (p) =>
+          !p.isInformational &&
+          (settings.showAsrIsha || (p.name !== "Asr" && p.name !== "Isha")) &&
+          p.time.getTime() > now,
+      );
       if (!next) {
         dismissPinnedTimes().catch(() => {});
         return;
@@ -282,7 +292,13 @@ export default function PrayerTimesScreen() {
       );
       showPinnedTimes(line).catch(() => {});
     },
-    [settings.prayerNotifications, settings.pinnedTimes, lang, t],
+    [
+      settings.prayerNotifications,
+      settings.pinnedTimes,
+      settings.showAsrIsha,
+      lang,
+      t,
+    ],
   );
 
   const apply = useCallback(

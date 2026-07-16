@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Linking,
   Modal,
+  Pressable,
   ScrollView,
   Switch,
   Text,
@@ -422,6 +423,13 @@ export default function SettingsScreen() {
   const player = useAudioPlayer();
   const playerStatus = useAudioPlayerStatus(player);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [soundSheetVisible, setSoundSheetVisible] = useState(false);
+
+  const closeSoundSheet = useCallback(() => {
+    setSoundSheetVisible(false);
+    player.pause();
+    setPreviewId(null);
+  }, [player]);
 
   useEffect(() => {
     if (playerStatus.didJustFinish) setPreviewId(null);
@@ -639,6 +647,99 @@ export default function SettingsScreen() {
         initialMode={authMode}
         onClose={() => setAuthVisible(false)}
       />
+      {/* Athan sound picker (bottom sheet) */}
+      <Modal
+        visible={soundSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeSoundSheet}
+      >
+        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+          <Pressable className="flex-1" onPress={closeSoundSheet} />
+          <View
+            className="rounded-t-3xl overflow-hidden"
+            style={{ backgroundColor: colors.background, maxHeight: "75%" }}
+          >
+            <View
+              className="px-5 py-4 border-b"
+              style={{ borderBottomColor: colors.separator }}
+            >
+              <View
+                className="flex-row items-center justify-between"
+                style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
+              >
+                <Text className="text-base font-bold" style={{ color: colors.text }}>
+                  {t.settings.athan}
+                </Text>
+                <TouchableOpacity onPress={closeSoundSheet} hitSlop={10}>
+                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <Text
+                className="text-xs mt-1"
+                style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+              >
+                {t.settings.athanPick}
+              </Text>
+            </View>
+
+            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false}>
+              {ATHAN_SOUNDS.map((s, i) => {
+                const selected = settings.athanSoundId === s.id;
+                const playing = previewId === s.id;
+                return (
+                  <TouchableOpacity
+                    key={s.id}
+                    className="flex-row items-center gap-3 px-5 py-3"
+                    style={[
+                      {
+                        backgroundColor: selected ? colors.totalBadgeBg : colors.settingRow,
+                        flexDirection: isRTL ? "row-reverse" : "row",
+                      },
+                      i < ATHAN_SOUNDS.length - 1 && {
+                        borderBottomWidth: 0.5,
+                        borderBottomColor: colors.separator,
+                      },
+                    ]}
+                    onPress={() => {
+                      updateSetting("athanSoundId", s.id);
+                      closeSoundSheet();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <TouchableOpacity
+                      className="w-9 h-9 rounded-full items-center justify-center"
+                      style={{ backgroundColor: playing ? colors.tint : colors.countBox }}
+                      onPress={() => handlePreview(s)}
+                      hitSlop={6}
+                    >
+                      <Ionicons
+                        name={playing ? "stop" : "play"}
+                        size={14}
+                        color={playing ? colors.addBtnText : colors.tint}
+                      />
+                    </TouchableOpacity>
+                    <Text
+                      className="flex-1 text-sm"
+                      style={{
+                        color: selected ? colors.tint : colors.text,
+                        fontWeight: selected ? "700" : "500",
+                        textAlign: isRTL ? "right" : "left",
+                      }}
+                    >
+                      {t.settings.soundOption} {s.n}
+                    </Text>
+                    {selected && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.tint} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ height: 28 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       {/* About Us modal */}
       <Modal
         visible={aboutVisible}
@@ -987,71 +1088,17 @@ export default function SettingsScreen() {
               isLast={settings.athanMode !== "takbir"}
             />
             {settings.athanMode === "takbir" && (
-              <View
-                className="px-4 pt-3 pb-4 border-t"
-                style={{
-                  backgroundColor: colors.settingRow,
-                  borderTopColor: colors.separator,
-                }}
-              >
-                <Text
-                  className="text-xs mb-3"
-                  style={{
-                    color: colors.textSecondary,
-                    textAlign: isRTL ? "right" : "left",
-                  }}
-                >
-                  {t.settings.athanPick}
-                </Text>
-                <View
-                  className="flex-row flex-wrap gap-2"
-                  style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
-                >
-                  {ATHAN_SOUNDS.map((s) => {
-                    const selected = settings.athanSoundId === s.id;
-                    const playing = previewId === s.id;
-                    return (
-                      <TouchableOpacity
-                        key={s.id}
-                        className="flex-row items-center gap-1.5 pl-1.5 pr-3 py-1.5 rounded-full border"
-                        style={{
-                          borderColor: selected ? colors.tint : colors.border,
-                          backgroundColor: selected
-                            ? colors.totalBadgeBg
-                            : "transparent",
-                          flexDirection: isRTL ? "row-reverse" : "row",
-                        }}
-                        onPress={() => updateSetting("athanSoundId", s.id)}
-                        activeOpacity={0.75}
-                      >
-                        <TouchableOpacity
-                          className="w-7 h-7 rounded-full items-center justify-center"
-                          style={{
-                            backgroundColor: playing ? colors.tint : colors.countBox,
-                          }}
-                          onPress={() => handlePreview(s)}
-                          hitSlop={6}
-                        >
-                          <Ionicons
-                            name={playing ? "stop" : "play"}
-                            size={12}
-                            color={playing ? colors.addBtnText : colors.tint}
-                          />
-                        </TouchableOpacity>
-                        <Text
-                          className="text-xs font-semibold"
-                          style={{ color: selected ? colors.tint : colors.textSecondary }}
-                        >
-                          {t.settings.soundOption} {s.n}
-                        </Text>
-                        {selected && (
-                          <Ionicons name="checkmark-circle" size={14} color={colors.tint} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
+              <ActionRow
+                label={t.settings.soundOption}
+                description={`${t.settings.soundOption} ${
+                  ATHAN_SOUNDS.find((s) => s.id === settings.athanSoundId)?.n ?? 1
+                }`}
+                actionLabel={t.settings.selectAction}
+                onPress={() => setSoundSheetVisible(true)}
+                colors={colors}
+                isRTL={isRTL}
+                isLast
+              />
             )}
           </Section>
         )}
