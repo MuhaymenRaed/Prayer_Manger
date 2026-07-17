@@ -21,7 +21,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-type Kind = "prayer" | "motivation" | "quran" | "pinned";
+type Kind = "prayer" | "motivation" | "quran" | "pinned" | "test";
 
 const PINNED_ID = "pinned-daily-times";
 
@@ -78,6 +78,32 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   await ensureNotificationChannels();
   const { status } = await Notifications.requestPermissionsAsync();
   return status === "granted";
+}
+
+/**
+ * Fire a test notification on the selected athan channel a few seconds from
+ * now — lets the user hear exactly what the prayer alert will sound like
+ * (and verifies device-level permissions/sound end-to-end).
+ */
+export async function scheduleAthanTest(
+  soundId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  await ensureNotificationChannels();
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      sound: Platform.OS === "ios" ? getAthanSound(soundId).file : true,
+      data: { kind: "test" as Kind },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: 2,
+      channelId: athanChannelId("takbir", soundId),
+    },
+  });
 }
 
 /** Cancel only notifications previously scheduled with a given `kind`. */

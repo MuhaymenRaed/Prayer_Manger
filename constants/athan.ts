@@ -53,8 +53,13 @@ export function getAthanSound(id: string): AthanSoundOption {
   return ATHAN_SOUNDS.find((s) => s.id === id) ?? ATHAN_SOUNDS[0];
 }
 
-/** Android channel id for a given mode + sound. */
+/**
+ * Android channel id for a given mode + sound.
+ * "athan2-" (v2): Android channels are immutable, so any channel created by
+ * an earlier build without a working sound stays broken forever — bumping
+ * the id generation guarantees fresh channels WITH the bundled sound.
+ */
 export function athanChannelId(mode: AthanMode, soundId: string): string {
   if (mode === "notification") return "prayers";
-  return `athan-${soundId}`;
+  return `athan2-${soundId}`;
 }

@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { LogBox } from "react-native";
+import { I18nManager, LogBox } from "react-native";
 import "react-native-reanimated";
 import "../global.css";
 
@@ -15,6 +15,11 @@ import { SettingsProvider } from "../contexts/SettingsContext";
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
 import { TrackerProvider } from "../contexts/TrackerContext";
 import { requestNotificationPermissions } from "../services/notificationService";
+
+// Direction is managed entirely in JS from the in-app language choice —
+// native RTL mirroring (Arabic device locales) must never double-flip it.
+I18nManager.allowRTL(false);
+I18nManager.swapLeftAndRightInRTL(false);
 
 // Expo Go (SDK 53+) dropped remote-push support and logs a noisy error on
 // startup even though we only use LOCAL scheduled notifications (which work

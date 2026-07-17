@@ -51,3 +51,6 @@ my-expo-app/
 # generated native projects (Expo CNG)
 android/
 ios/
+
+# release signing (never commit)
+credentials/

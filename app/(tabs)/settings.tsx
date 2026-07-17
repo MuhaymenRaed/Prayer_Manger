@@ -34,7 +34,10 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import { dismissPinnedTimes } from "../../services/notificationService";
+import {
+  dismissPinnedTimes,
+  scheduleAthanTest,
+} from "../../services/notificationService";
 import { saveLocation } from "../../services/storageService";
 import { SavedLocation } from "../../types/prayer";
 
@@ -684,6 +687,30 @@ export default function SettingsScreen() {
             </View>
 
             <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false}>
+              {/* end-to-end sound test through a real notification */}
+              <TouchableOpacity
+                className="flex-row items-center gap-3 px-5 py-3.5 border-b"
+                style={{
+                  backgroundColor: colors.totalBadgeBg,
+                  borderBottomColor: colors.separator,
+                  flexDirection: isRTL ? "row-reverse" : "row",
+                }}
+                onPress={() =>
+                  scheduleAthanTest(
+                    settings.athanSoundId,
+                    "يقين · Yaqeen",
+                    t.settings.testSoundBody,
+                  ).catch(() => {})
+                }
+                activeOpacity={0.75}
+              >
+                <Ionicons name="notifications-outline" size={18} color={colors.tint} />
+                <Text className="flex-1 text-sm font-bold" style={{ color: colors.tint, textAlign: isRTL ? "right" : "left" }}>
+                  {t.settings.testSound}
+                </Text>
+                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={15} color={colors.tint} />
+              </TouchableOpacity>
+
               {ATHAN_SOUNDS.map((s, i) => {
                 const selected = settings.athanSoundId === s.id;
                 const playing = previewId === s.id;
