@@ -34,6 +34,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useTheme } from "../../contexts/ThemeContext";
+import * as IntentLauncher from "expo-intent-launcher";
+
 import {
   dismissPinnedTimes,
   scheduleAthanTest,
@@ -488,6 +490,28 @@ export default function SettingsScreen() {
     await updateSetting("pinnedTimes", next);
     if (!next) dismissPinnedTimes().catch(() => {});
   }, [settings.pinnedTimes, updateSetting]);
+
+  // Battery-optimization exemption + OEM guidance so prayer alerts fire
+  // exactly on time with the app closed.
+  const handleReliableAlerts = useCallback(async () => {
+    const pkg = "package:com.qcode.yaqeen"; // keep in sync with app.json android.package
+    try {
+      await IntentLauncher.startActivityAsync(
+        "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        { data: pkg },
+      );
+    } catch {
+      await IntentLauncher.startActivityAsync(
+        "android.settings.APPLICATION_DETAILS_SETTINGS",
+        { data: pkg },
+      ).catch(() => {});
+    }
+    dialog.show({
+      title: t.settings.reliableAlertsGuideTitle,
+      message: t.settings.reliableAlertsGuideMsg,
+      icon: "battery-charging-outline",
+    });
+  }, [dialog, t]);
 
   const handleThemeToggle = useCallback(async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1086,6 +1110,14 @@ export default function SettingsScreen() {
             description={t.settings.pinnedTimesDesc}
             value={settings.pinnedTimes}
             onToggle={handleTogglePinned}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <ActionRow
+            label={t.settings.reliableAlerts}
+            description={t.settings.reliableAlertsDesc}
+            actionLabel={t.settings.reliableAlertsAction}
+            onPress={handleReliableAlerts}
             colors={colors}
             isRTL={isRTL}
             isLast

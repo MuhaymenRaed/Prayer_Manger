@@ -83,6 +83,7 @@
       "./plugins/withReleaseSlim",
       "./plugins/withForceLtr",
       "./plugins/withReleaseSigning",
+      "./plugins/withReliableAlarms",
       "expo-audio"
     ],
     "experiments": {
