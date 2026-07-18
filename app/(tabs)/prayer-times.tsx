@@ -20,11 +20,9 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
-  cancelAllNotifications,
-  dismissPinnedTimes,
-  scheduleUpcomingPrayerAlerts,
-  showPinnedTimes,
-} from "../../services/notificationService";
+  armPinnedChain,
+  refreshAllAlerts,
+} from "../../services/alertsRefresher";
 import {
   formatDate,
   formatTime,
@@ -220,86 +218,16 @@ export default function PrayerTimesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const coordsRef = useRef({ lat: startLoc.latitude, lon: startLoc.longitude });
 
-  const scheduleNotifs = useCallback(
-    (prayers: PrayerTimeInfo[], tz: string) => {
-      if (!settings.prayerNotifications) {
-        cancelAllNotifications().catch(() => {});
-        return;
-      }
+  // Alerts + pinned bar are owned by the shared refresher (same code the
+  // startup manager and the background task use): 7-day alert window, and
+  // the pinned bar with its pre-armed flip at the exact prayer moment.
+  const scheduleNotifs = useCallback(() => {
+    refreshAllAlerts().catch(() => {});
+  }, []);
 
-      // A week of per-prayer alerts, fully in the app's language.
-      scheduleUpcomingPrayerAlerts(
-        coordsRef.current.lat,
-        coordsRef.current.lon,
-        (p) => {
-          const localized = t.athanNames[p.name] ?? p.name;
-          return {
-            title: t.notif.title(localized),
-            body: t.notif.body(localized, p.arabicName),
-          };
-        },
-        { mode: settings.athanMode, soundId: settings.athanSoundId },
-      ).catch(() => {});
-
-      updatePinned(prayers, tz);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      settings.prayerNotifications,
-      settings.vibration,
-      settings.pinnedTimes,
-      settings.athanMode,
-      settings.athanSoundId,
-      settings.showAsrIsha,
-      lang,
-      t,
-    ],
-  );
-
-  // Pinned bar — elegant single line: only the NEXT prayer + remaining time.
-  // Respects the user's display preferences: prayers hidden from the table
-  // (e.g. Asr & Isha for those praying jam') are skipped, so after Dhuhr the
-  // bar goes straight to Maghrib.
-  const updatePinned = useCallback(
-    (prayers: PrayerTimeInfo[], tz: string) => {
-      if (!settings.prayerNotifications || !settings.pinnedTimes) {
-        dismissPinnedTimes().catch(() => {});
-        return;
-      }
-      const now = Date.now();
-      const next = prayers.find(
-        (p) =>
-          !p.isInformational &&
-          (settings.showAsrIsha || (p.name !== "Asr" && p.name !== "Isha")) &&
-          p.time.getTime() > now,
-      );
-      if (!next) {
-        dismissPinnedTimes().catch(() => {});
-        return;
-      }
-      const mins = Math.max(
-        0,
-        Math.floor((next.time.getTime() - Date.now()) / 60000),
-      );
-      const remaining = t.prayerTimes.durationShort(
-        Math.floor(mins / 60),
-        mins % 60,
-      );
-      const line = t.notif.pinnedNext(
-        t.athanNames[next.name] ?? next.name,
-        formatTime(next.time, lang, tz),
-        remaining,
-      );
-      showPinnedTimes(line).catch(() => {});
-    },
-    [
-      settings.prayerNotifications,
-      settings.pinnedTimes,
-      settings.showAsrIsha,
-      lang,
-      t,
-    ],
-  );
+  const updatePinned = useCallback(() => {
+    armPinnedChain().catch(() => {});
+  }, []);
 
   const apply = useCallback(
     (lat: number, lon: number, name: string, tz: string) => {
@@ -308,7 +236,7 @@ export default function PrayerTimesScreen() {
       setLocationName(name);
       const r = getShiaPrayerTimes(lat, lon);
       setResult(r);
-      scheduleNotifs(r.prayers, tz);
+      scheduleNotifs();
     },
     [scheduleNotifs],
   );
@@ -389,7 +317,7 @@ export default function PrayerTimesScreen() {
       const { lat, lon } = coordsRef.current;
       const r = getShiaPrayerTimes(lat, lon);
       setResult(r);
-      updatePinned(r.prayers, tzRef.current);
+      updatePinned();
     }, 60000);
     return () => clearInterval(id);
   }, [updatePinned]);

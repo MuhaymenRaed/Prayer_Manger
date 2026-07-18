@@ -117,6 +117,31 @@ export function getShiaPrayerTimes(
   return { prayers, nextPrayer, timeToNext };
 }
 
+/**
+ * The next actionable prayer at (or after) `at`, honoring the user's
+ * display preference (skips Asr & Isha when hidden — praying jam').
+ * Searches today then tomorrow, so late-night always resolves to Fajr.
+ */
+export function getNextUpcomingPrayer(
+  latitude: number,
+  longitude: number,
+  showAsrIsha: boolean,
+  at: Date = new Date(),
+): PrayerTimeInfo | null {
+  for (const dayOffset of [0, 1]) {
+    const date = new Date(at.getTime() + dayOffset * 86400000);
+    const { prayers } = getShiaPrayerTimes(latitude, longitude, date);
+    const found = prayers.find(
+      (p) =>
+        !p.isInformational &&
+        (showAsrIsha || (p.name !== "Asr" && p.name !== "Isha")) &&
+        p.time.getTime() > at.getTime(),
+    );
+    if (found) return found;
+  }
+  return null;
+}
+
 export function formatTime(
   date: Date,
   lang: "en" | "ar" = "en",

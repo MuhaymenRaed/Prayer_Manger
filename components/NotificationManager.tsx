@@ -1,28 +1,16 @@
 import { useEffect } from "react";
 
-import { getLocationById } from "../constants/locations";
 import { verseOfTheDay } from "../constants/quran";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTracker } from "../contexts/TrackerContext";
+import { refreshAllAlerts } from "../services/alertsRefresher";
 import {
-  cancelAllNotifications,
   cancelMotivationNotifications,
   cancelQuranNotifications,
-  dismissPinnedTimes,
   scheduleMotivationNotification,
   scheduleQuranNotification,
-  scheduleUpcomingPrayerAlerts,
-  showPinnedTimes,
 } from "../services/notificationService";
-import {
-  formatTime,
-  getShiaPrayerTimes,
-} from "../services/prayerTimesService";
-import { getSavedLocation } from "../services/storageService";
-
-const DEFAULT_LAT = 31.9928;
-const DEFAULT_LON = 44.3357;
 
 /**
  * Headless component: keeps ALL notifications in sync with the user's
@@ -39,82 +27,10 @@ export function NotificationManager() {
 
   // Prayer alerts + pinned bar — on startup and whenever anything relevant
   // changes (athan sound/mode, location, language, visibility prefs).
+  // The shared refresher reads settings/language from storage, so it also
+  // powers the headless background task with identical behavior.
   useEffect(() => {
-    (async () => {
-      if (!settings.prayerNotifications) {
-        await cancelAllNotifications();
-        return;
-      }
-
-      // Resolve coordinates: chosen city, else last saved GPS fix, else Najaf.
-      let lat = DEFAULT_LAT;
-      let lon = DEFAULT_LON;
-      let tz: string | undefined;
-      const preset =
-        settings.locationId !== "auto"
-          ? getLocationById(settings.locationId)
-          : undefined;
-      if (preset) {
-        lat = preset.latitude;
-        lon = preset.longitude;
-        tz = preset.timezone;
-      } else {
-        const saved = await getSavedLocation();
-        if (saved) {
-          lat = saved.latitude;
-          lon = saved.longitude;
-        }
-        tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      }
-
-      const { prayers } = getShiaPrayerTimes(lat, lon);
-
-      // A full week of alerts — fires OS-side even if the app stays closed.
-      await scheduleUpcomingPrayerAlerts(
-        lat,
-        lon,
-        (p) => {
-          const name = t.athanNames[p.name] ?? p.name;
-          return {
-            title: t.notif.title(name),
-            body: t.notif.body(name, p.arabicName),
-          };
-        },
-        { mode: settings.athanMode, soundId: settings.athanSoundId },
-      );
-
-      // Pinned next-prayer bar (preference-aware: skips hidden Asr/Isha).
-      if (settings.pinnedTimes) {
-        const now = Date.now();
-        const next = prayers.find(
-          (p) =>
-            !p.isInformational &&
-            (settings.showAsrIsha || (p.name !== "Asr" && p.name !== "Isha")) &&
-            p.time.getTime() > now,
-        );
-        if (next) {
-          const mins = Math.max(
-            0,
-            Math.floor((next.time.getTime() - now) / 60000),
-          );
-          const remaining = t.prayerTimes.durationShort(
-            Math.floor(mins / 60),
-            mins % 60,
-          );
-          await showPinnedTimes(
-            t.notif.pinnedNext(
-              t.athanNames[next.name] ?? next.name,
-              formatTime(next.time, lang, tz),
-              remaining,
-            ),
-          );
-        } else {
-          await dismissPinnedTimes();
-        }
-      } else {
-        await dismissPinnedTimes();
-      }
-    })().catch(() => {});
+    refreshAllAlerts().catch(() => {});
   }, [
     settings.prayerNotifications,
     settings.vibration,

@@ -84,7 +84,8 @@
       "./plugins/withForceLtr",
       "./plugins/withReleaseSigning",
       "./plugins/withReliableAlarms",
-      "expo-audio"
+      "expo-audio",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,

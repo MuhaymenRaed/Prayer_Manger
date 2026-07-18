@@ -187,27 +187,55 @@ export async function scheduleUpcomingPrayerAlerts(
   await schedulePrayerNotifications(all, false, buildContent, athan);
 }
 
+function pinnedContent(body: string) {
+  return {
+    title: null,
+    body,
+    sound: false,
+    sticky: true,
+    data: { kind: "pinned" as Kind },
+  };
+}
+
 /**
- * Show/refresh the persistent "today's times" notification (like the
- * haqibat al-mumin pinned bar). Minimal by design: no title, one line of
- * times — the app icon does the talking. Re-posting with the same
- * identifier replaces the previous one in place. Android-sticky, silent.
+ * Show/refresh the persistent next-prayer bar (silent, sticky). Re-posting
+ * with the same identifier replaces the previous one in place.
  */
 export async function showPinnedTimes(body: string): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     identifier: PINNED_ID,
-    content: {
-      title: null,
-      body,
-      sound: false,
-      sticky: true,
-      data: { kind: "pinned" as Kind },
-    },
+    content: pinnedContent(body),
     trigger: { channelId: "pinned" }, // presents immediately on this channel
   });
 }
 
+/**
+ * Pre-schedule the bar's REPLACEMENT content as an exact alarm. Because it
+ * shares PINNED_ID, when it fires Android swaps the presented bar in place —
+ * this is how the pinned notification flips to the next prayer at the exact
+ * prayer moment even while the app is closed (local notifications cannot run
+ * code, so the future content is computed at scheduling time).
+ * Only one pending update exists at a time; the background refresh task and
+ * app opens keep re-arming the chain.
+ */
+export async function schedulePinnedUpdateAt(
+  date: Date,
+  body: string,
+): Promise<void> {
+  await Notifications.scheduleNotificationAsync({
+    identifier: PINNED_ID,
+    content: pinnedContent(body),
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date,
+      channelId: "pinned",
+    },
+  });
+}
+
 export async function dismissPinnedTimes(): Promise<void> {
+  // Presented bar + any pending scheduled replacement.
+  await Notifications.cancelScheduledNotificationAsync(PINNED_ID).catch(() => {});
   await Notifications.dismissNotificationAsync(PINNED_ID);
 }
 

@@ -14,6 +14,7 @@ import { LanguageProvider } from "../contexts/LanguageContext";
 import { SettingsProvider } from "../contexts/SettingsContext";
 import { ThemeProvider, useTheme } from "../contexts/ThemeContext";
 import { TrackerProvider } from "../contexts/TrackerContext";
+import { registerBackgroundRefresh } from "../services/backgroundRefresh";
 import { requestNotificationPermissions } from "../services/notificationService";
 
 // Direction is managed entirely in JS from the in-app language choice —
@@ -42,6 +43,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     requestNotificationPermissions();
+    registerBackgroundRefresh();
   }, []);
 
   // First-launch onboarding gate (language + theme choice).
