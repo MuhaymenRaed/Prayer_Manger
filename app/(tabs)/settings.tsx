@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import * as Haptics from "expo-haptics";
-import * as Location from "expo-location";
 import type { User } from "@supabase/supabase-js";
+import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
+import * as Location from "expo-location";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Linking,
@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 
+import * as IntentLauncher from "expo-intent-launcher";
 import { useDialog } from "../../components/AppDialog";
 import { AuthModal } from "../../components/AuthModal";
 import { YaqeenLogoBox } from "../../components/YaqeenLogo";
@@ -26,15 +27,11 @@ import {
   AthanSoundOption,
   HAS_ATHAN_AUDIO,
 } from "../../constants/athan";
-import {
-  getLocationById,
-  groupedLocations,
-} from "../../constants/locations";
+import { getLocationById, groupedLocations } from "../../constants/locations";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useSettings } from "../../contexts/SettingsContext";
 import { useTheme } from "../../contexts/ThemeContext";
-import * as IntentLauncher from "expo-intent-launcher";
 
 import {
   dismissPinnedTimes,
@@ -219,10 +216,15 @@ function AccountCard({
 }) {
   const meta = (user.user_metadata ?? {}) as Record<string, string | undefined>;
   const name =
-    meta.display_name || meta.full_name || meta.name || user.email?.split("@")[0] || "";
+    meta.display_name ||
+    meta.full_name ||
+    meta.name ||
+    user.email?.split("@")[0] ||
+    "";
   const avatar = meta.avatar_url || meta.picture;
   const provider = user.app_metadata?.provider;
-  const providerLabel = provider === "google" ? t.settings.viaGoogle : t.settings.viaEmail;
+  const providerLabel =
+    provider === "google" ? t.settings.viaGoogle : t.settings.viaEmail;
   const initial = (name || user.email || "?").trim().charAt(0).toUpperCase();
 
   return (
@@ -243,31 +245,51 @@ function AccountCard({
             className="w-14 h-14 rounded-full items-center justify-center"
             style={{ backgroundColor: colors.tint }}
           >
-            <Text className="text-2xl font-bold" style={{ color: colors.addBtnText }}>
+            <Text
+              className="text-2xl font-bold"
+              style={{ color: colors.addBtnText }}
+            >
               {initial}
             </Text>
           </View>
         )}
 
-        <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
+        <View
+          className="flex-1"
+          style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}
+        >
           {!!name && (
-            <Text className="text-base font-bold" style={{ color: colors.text }} numberOfLines={1}>
+            <Text
+              className="text-base font-bold"
+              style={{ color: colors.text }}
+              numberOfLines={1}
+            >
               {name}
             </Text>
           )}
-          <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
+          <Text
+            className="text-xs"
+            style={{ color: colors.textSecondary }}
+            numberOfLines={1}
+          >
             {user.email}
           </Text>
           <View
             className="flex-row items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full"
-            style={{ backgroundColor: colors.countBox, flexDirection: isRTL ? "row-reverse" : "row" }}
+            style={{
+              backgroundColor: colors.countBox,
+              flexDirection: isRTL ? "row-reverse" : "row",
+            }}
           >
             <Ionicons
               name={provider === "google" ? "logo-google" : "mail-outline"}
               size={11}
               color={colors.textSecondary}
             />
-            <Text className="text-[11px] font-medium" style={{ color: colors.textSecondary }}>
+            <Text
+              className="text-[11px] font-medium"
+              style={{ color: colors.textSecondary }}
+            >
               {providerLabel}
             </Text>
           </View>
@@ -277,10 +299,20 @@ function AccountCard({
       {/* synced status */}
       <View
         className="flex-row items-center gap-1.5 mt-4 px-3 py-2 rounded-xl"
-        style={{ backgroundColor: colors.successBg, flexDirection: isRTL ? "row-reverse" : "row" }}
+        style={{
+          backgroundColor: colors.successBg,
+          flexDirection: isRTL ? "row-reverse" : "row",
+        }}
       >
-        <Ionicons name="cloud-done-outline" size={15} color={colors.successText} />
-        <Text className="text-xs font-medium" style={{ color: colors.successText }}>
+        <Ionicons
+          name="cloud-done-outline"
+          size={15}
+          color={colors.successText}
+        />
+        <Text
+          className="text-xs font-medium"
+          style={{ color: colors.successText }}
+        >
           {t.settings.accountSynced}
         </Text>
       </View>
@@ -293,7 +325,10 @@ function AccountCard({
         activeOpacity={0.8}
       >
         <Ionicons name="log-out-outline" size={17} color={colors.dangerText} />
-        <Text className="text-sm font-semibold" style={{ color: colors.dangerText }}>
+        <Text
+          className="text-sm font-semibold"
+          style={{ color: colors.dangerText }}
+        >
           {t.settings.logout}
         </Text>
       </TouchableOpacity>
@@ -340,26 +375,45 @@ function LocationPicker({
     >
       <Text
         className="text-sm"
-        style={{ color: selected ? colors.tint : colors.text, fontWeight: selected ? "700" : "400" }}
+        style={{
+          color: selected ? colors.tint : colors.text,
+          fontWeight: selected ? "700" : "400",
+        }}
       >
         {name}
       </Text>
-      {selected && <Ionicons name="checkmark-circle" size={18} color={colors.tint} />}
+      {selected && (
+        <Ionicons name="checkmark-circle" size={18} color={colors.tint} />
+      )}
     </TouchableOpacity>
   );
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View
+        className="flex-1 justify-end"
+        style={{ backgroundColor: colors.overlay }}
+      >
         <View
           className="rounded-t-3xl overflow-hidden"
           style={{ backgroundColor: colors.background, maxHeight: "85%" }}
         >
           <View
             className="flex-row items-center justify-between px-5 py-4 border-b"
-            style={{ borderBottomColor: colors.separator, flexDirection: isRTL ? "row-reverse" : "row" }}
+            style={{
+              borderBottomColor: colors.separator,
+              flexDirection: isRTL ? "row-reverse" : "row",
+            }}
           >
-            <Text className="text-base font-bold" style={{ color: colors.text }}>
+            <Text
+              className="text-base font-bold"
+              style={{ color: colors.text }}
+            >
               {t.settings.locationCity}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
@@ -367,17 +421,29 @@ function LocationPicker({
             </TouchableOpacity>
           </View>
 
-          <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            overScrollMode="never"
+            bounces={false}
+            showsVerticalScrollIndicator={false}
+          >
             {/* GPS option */}
             <View style={{ backgroundColor: colors.settingRow }}>
-              <Row id="auto" name={t.settings.autoOption} selected={selectedId === "auto"} />
+              <Row
+                id="auto"
+                name={t.settings.autoOption}
+                selected={selectedId === "auto"}
+              />
             </View>
 
             {groups.map((g) => (
               <View key={g.country}>
                 <Text
                   className="text-xs font-bold uppercase tracking-wider px-5 pt-4 pb-1.5"
-                  style={{ color: colors.textMuted, backgroundColor: colors.sectionHeader, textAlign: isRTL ? "right" : "left" }}
+                  style={{
+                    color: colors.textMuted,
+                    backgroundColor: colors.sectionHeader,
+                    textAlign: isRTL ? "right" : "left",
+                  }}
                 >
                   {lang === "ar" ? g.countryAr : g.countryEn}
                 </Text>
@@ -461,7 +527,9 @@ export default function SettingsScreen() {
       : (() => {
           const loc = getLocationById(settings.locationId);
           if (!loc) return t.settings.autoOption;
-          return lang === "ar" ? `${loc.nameAr}، ${loc.countryAr}` : `${loc.nameEn}, ${loc.countryEn}`;
+          return lang === "ar"
+            ? `${loc.nameAr}، ${loc.countryAr}`
+            : `${loc.nameEn}, ${loc.countryEn}`;
         })();
 
   const handleSelectCity = useCallback(
@@ -470,8 +538,15 @@ export default function SettingsScreen() {
       await updateSetting("locationId", id);
       const loc = getLocationById(id);
       if (loc) {
-        const name = lang === "ar" ? `${loc.nameAr}، ${loc.countryAr}` : `${loc.nameEn}, ${loc.countryEn}`;
-        await saveLocation({ latitude: loc.latitude, longitude: loc.longitude, displayName: name });
+        const name =
+          lang === "ar"
+            ? `${loc.nameAr}، ${loc.countryAr}`
+            : `${loc.nameEn}, ${loc.countryEn}`;
+        await saveLocation({
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          displayName: name,
+        });
       }
     },
     [updateSetting, lang],
@@ -494,7 +569,7 @@ export default function SettingsScreen() {
   // Battery-optimization exemption + OEM guidance so prayer alerts fire
   // exactly on time with the app closed.
   const handleReliableAlerts = useCallback(async () => {
-    const pkg = "package:com.qcode.yaqeen"; // keep in sync with app.json android.package
+    const pkg = "package:app.yaqeen.com"; // keep in sync with app.json android.package
     try {
       await IntentLauncher.startActivityAsync(
         "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
@@ -681,7 +756,10 @@ export default function SettingsScreen() {
         animationType="slide"
         onRequestClose={closeSoundSheet}
       >
-        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+        <View
+          className="flex-1 justify-end"
+          style={{ backgroundColor: colors.overlay }}
+        >
           <Pressable className="flex-1" onPress={closeSoundSheet} />
           <View
             className="rounded-t-3xl overflow-hidden"
@@ -695,22 +773,36 @@ export default function SettingsScreen() {
                 className="flex-row items-center justify-between"
                 style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
               >
-                <Text className="text-base font-bold" style={{ color: colors.text }}>
+                <Text
+                  className="text-base font-bold"
+                  style={{ color: colors.text }}
+                >
                   {t.settings.athan}
                 </Text>
                 <TouchableOpacity onPress={closeSoundSheet} hitSlop={10}>
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  <Ionicons
+                    name="close"
+                    size={22}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
               <Text
                 className="text-xs mt-1"
-                style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+                style={{
+                  color: colors.textSecondary,
+                  textAlign: isRTL ? "right" : "left",
+                }}
               >
                 {t.settings.athanPick}
               </Text>
             </View>
 
-            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              overScrollMode="never"
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+            >
               {/* end-to-end sound test through a real notification */}
               <TouchableOpacity
                 className="flex-row items-center gap-3 px-5 py-3.5 border-b"
@@ -728,11 +820,25 @@ export default function SettingsScreen() {
                 }
                 activeOpacity={0.75}
               >
-                <Ionicons name="notifications-outline" size={18} color={colors.tint} />
-                <Text className="flex-1 text-sm font-bold" style={{ color: colors.tint, textAlign: isRTL ? "right" : "left" }}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={18}
+                  color={colors.tint}
+                />
+                <Text
+                  className="flex-1 text-sm font-bold"
+                  style={{
+                    color: colors.tint,
+                    textAlign: isRTL ? "right" : "left",
+                  }}
+                >
                   {t.settings.testSound}
                 </Text>
-                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={15} color={colors.tint} />
+                <Ionicons
+                  name={isRTL ? "chevron-back" : "chevron-forward"}
+                  size={15}
+                  color={colors.tint}
+                />
               </TouchableOpacity>
 
               {ATHAN_SOUNDS.map((s, i) => {
@@ -744,7 +850,9 @@ export default function SettingsScreen() {
                     className="flex-row items-center gap-3 px-5 py-3"
                     style={[
                       {
-                        backgroundColor: selected ? colors.totalBadgeBg : colors.settingRow,
+                        backgroundColor: selected
+                          ? colors.totalBadgeBg
+                          : colors.settingRow,
                         flexDirection: isRTL ? "row-reverse" : "row",
                       },
                       i < ATHAN_SOUNDS.length - 1 && {
@@ -760,7 +868,11 @@ export default function SettingsScreen() {
                   >
                     <TouchableOpacity
                       className="w-9 h-9 rounded-full items-center justify-center"
-                      style={{ backgroundColor: playing ? colors.tint : colors.countBox }}
+                      style={{
+                        backgroundColor: playing
+                          ? colors.tint
+                          : colors.countBox,
+                      }}
                       onPress={() => handlePreview(s)}
                       hitSlop={6}
                     >
@@ -781,7 +893,11 @@ export default function SettingsScreen() {
                       {t.settings.soundOption} {s.n}
                     </Text>
                     {selected && (
-                      <Ionicons name="checkmark-circle" size={20} color={colors.tint} />
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color={colors.tint}
+                      />
                     )}
                   </TouchableOpacity>
                 );
@@ -806,17 +922,28 @@ export default function SettingsScreen() {
             className="w-full rounded-3xl p-6"
             style={{ backgroundColor: colors.card, maxHeight: "85%" }}
           >
-            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+            <ScrollView
+              overScrollMode="never"
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+            >
               <View className="items-center mb-4">
                 <YaqeenLogoBox size={64} />
-                <Text className="text-xl font-bold mt-3" style={{ color: colors.text }}>
+                <Text
+                  className="text-xl font-bold mt-3"
+                  style={{ color: colors.text }}
+                >
                   {t.settings.aboutUsTitle}
                 </Text>
               </View>
 
               <Text
                 className="text-sm leading-6 mb-5"
-                style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+                style={{
+                  color: colors.textSecondary,
+                  textAlign: isRTL ? "right" : "left",
+                }}
               >
                 {t.settings.aboutUsBody}
               </Text>
@@ -824,61 +951,121 @@ export default function SettingsScreen() {
               {/* Instagram */}
               <TouchableOpacity
                 className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border mb-2.5"
-                style={{ borderColor: colors.border, backgroundColor: colors.settingRow, flexDirection: isRTL ? "row-reverse" : "row" }}
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.settingRow,
+                  flexDirection: isRTL ? "row-reverse" : "row",
+                }}
                 onPress={openInstagram}
                 activeOpacity={0.8}
               >
                 <Ionicons name="logo-instagram" size={20} color="#E1306C" />
-                <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
-                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                <View
+                  className="flex-1"
+                  style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}
+                >
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     {t.settings.followInstagram}
                   </Text>
-                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {t.settings.instagramHandle}
                   </Text>
                 </View>
-                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+                <Ionicons
+                  name={isRTL ? "chevron-back" : "chevron-forward"}
+                  size={16}
+                  color={colors.textMuted}
+                />
               </TouchableOpacity>
 
               {/* Phone (WhatsApp / Telegram) */}
               <TouchableOpacity
                 className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border mb-2.5"
-                style={{ borderColor: colors.border, backgroundColor: colors.settingRow, flexDirection: isRTL ? "row-reverse" : "row" }}
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.settingRow,
+                  flexDirection: isRTL ? "row-reverse" : "row",
+                }}
                 onPress={openPhone}
                 activeOpacity={0.8}
               >
-                <Ionicons name="chatbubbles-outline" size={20} color={colors.tint} />
-                <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
-                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                <Ionicons
+                  name="chatbubbles-outline"
+                  size={20}
+                  color={colors.tint}
+                />
+                <View
+                  className="flex-1"
+                  style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}
+                >
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     {t.settings.contactUs}
                   </Text>
-                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     +964 777 874 2041
                   </Text>
                 </View>
-                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+                <Ionicons
+                  name={isRTL ? "chevron-back" : "chevron-forward"}
+                  size={16}
+                  color={colors.textMuted}
+                />
               </TouchableOpacity>
 
               {/* Email */}
               <TouchableOpacity
                 className="flex-row items-center gap-3 px-4 py-3.5 rounded-2xl border"
-                style={{ borderColor: colors.border, backgroundColor: colors.settingRow, flexDirection: isRTL ? "row-reverse" : "row" }}
-                onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})}
+                style={{
+                  borderColor: colors.border,
+                  backgroundColor: colors.settingRow,
+                  flexDirection: isRTL ? "row-reverse" : "row",
+                }}
+                onPress={() =>
+                  Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() => {})
+                }
                 activeOpacity={0.8}
               >
                 <Ionicons name="mail-outline" size={20} color={colors.tint} />
-                <View className="flex-1" style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
-                  <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                <View
+                  className="flex-1"
+                  style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}
+                >
+                  <Text
+                    className="text-sm font-semibold"
+                    style={{ color: colors.text }}
+                  >
                     {t.settings.contactEmail}
                   </Text>
-                  <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                  <Text
+                    className="text-xs"
+                    style={{ color: colors.textSecondary }}
+                  >
                     {SUPPORT_EMAIL}
                   </Text>
                 </View>
-                <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={16} color={colors.textMuted} />
+                <Ionicons
+                  name={isRTL ? "chevron-back" : "chevron-forward"}
+                  size={16}
+                  color={colors.textMuted}
+                />
               </TouchableOpacity>
 
-              <Text className="text-xs text-center mt-5" style={{ color: colors.textMuted }}>
+              <Text
+                className="text-xs text-center mt-5"
+                style={{ color: colors.textMuted }}
+              >
                 {t.settings.developedBy}
               </Text>
             </ScrollView>
@@ -889,7 +1076,10 @@ export default function SettingsScreen() {
               onPress={() => setAboutVisible(false)}
               activeOpacity={0.85}
             >
-              <Text className="text-sm font-bold" style={{ color: colors.addBtnText }}>
+              <Text
+                className="text-sm font-bold"
+                style={{ color: colors.addBtnText }}
+              >
                 {t.settings.ok}
               </Text>
             </TouchableOpacity>
@@ -916,15 +1106,30 @@ export default function SettingsScreen() {
               className="flex-row items-center gap-2 mb-3"
               style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
             >
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.tint} />
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={colors.tint}
+              />
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.text }}
+              >
                 {t.settings.privacyTitle}
               </Text>
             </View>
-            <ScrollView overScrollMode="never" bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+            <ScrollView
+              overScrollMode="never"
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+            >
               <Text
                 className="text-sm leading-6"
-                style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+                style={{
+                  color: colors.textSecondary,
+                  textAlign: isRTL ? "right" : "left",
+                }}
               >
                 {t.settings.privacyBody}
               </Text>
@@ -935,7 +1140,10 @@ export default function SettingsScreen() {
               onPress={() => setPrivacyVisible(false)}
               activeOpacity={0.85}
             >
-              <Text className="text-sm font-bold" style={{ color: colors.addBtnText }}>
+              <Text
+                className="text-sm font-bold"
+                style={{ color: colors.addBtnText }}
+              >
                 {t.settings.ok}
               </Text>
             </TouchableOpacity>
@@ -1150,7 +1358,8 @@ export default function SettingsScreen() {
               <ActionRow
                 label={t.settings.soundOption}
                 description={`${t.settings.soundOption} ${
-                  ATHAN_SOUNDS.find((s) => s.id === settings.athanSoundId)?.n ?? 1
+                  ATHAN_SOUNDS.find((s) => s.id === settings.athanSoundId)?.n ??
+                  1
                 }`}
                 actionLabel={t.settings.selectAction}
                 onPress={() => setSoundSheetVisible(true)}
@@ -1181,7 +1390,9 @@ export default function SettingsScreen() {
             label={t.settings.showSunEvents}
             description={t.settings.showSunEventsDesc}
             value={settings.showSunEvents}
-            onToggle={() => updateSetting("showSunEvents", !settings.showSunEvents)}
+            onToggle={() =>
+              updateSetting("showSunEvents", !settings.showSunEvents)
+            }
             colors={colors}
             isRTL={isRTL}
             isLast
@@ -1281,7 +1492,10 @@ export default function SettingsScreen() {
                 onPress={handleAboutUs}
                 activeOpacity={0.75}
               >
-                <Text className="text-xs font-semibold" style={{ color: colors.tint }}>
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: colors.tint }}
+                >
                   {t.settings.aboutUs}
                 </Text>
               </TouchableOpacity>
@@ -1318,4 +1532,3 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
-

@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.qcode.yaqeen"
+      "bundleIdentifier": "app.yaqeen.com"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.qcode.yaqeen",
+      "package": "app.yaqeen.com",
       "versionCode": 2,
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
