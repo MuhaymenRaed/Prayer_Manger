@@ -698,7 +698,7 @@ export default function SettingsScreen() {
                 onPress={() =>
                   scheduleAthanTest(
                     settings.athanSoundId,
-                    "يقين · Yaqeen",
+                    "Yaqeen | يقين",
                     t.settings.testSoundBody,
                   ).catch(() => {})
                 }

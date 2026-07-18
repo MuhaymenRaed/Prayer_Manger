@@ -465,8 +465,8 @@ export default function TrackerScreen() {
 
           <View className="flex-1 items-center px-2">
             <Text
-              className="text-xl font-bold tracking-wide"
-              style={{ color: colors.headerTitle, textAlign: "center" }}
+              className="font-bold tracking-wide"
+              style={{ color: colors.headerTitle, textAlign: "center", fontSize: 20, lineHeight: 34 }}
             >
               {t.tracker.title}
             </Text>

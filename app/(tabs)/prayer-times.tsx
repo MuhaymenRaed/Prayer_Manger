@@ -449,7 +449,10 @@ export default function PrayerTimesScreen() {
       >
         {/* Header */}
         <View className="items-center pt-4 pb-3 gap-0.5">
-          <Text className="text-2xl font-bold tracking-wide" style={{ color: colors.headerTitle, textAlign: "center" }}>
+          <Text
+            className="font-bold tracking-wide"
+            style={{ color: colors.headerTitle, textAlign: "center", fontSize: 24, lineHeight: 40 }}
+          >
             {t.prayerTimes.title}
           </Text>
           <View
@@ -475,7 +478,12 @@ export default function PrayerTimesScreen() {
                   <Text className="text-xs font-medium" style={{ color: colors.addBtnText, opacity: 0.9 }}>
                     {t.prayerTimes.nextPrayer}
                   </Text>
-                  <Text className="text-3xl font-extrabold mt-1" style={{ color: colors.addBtnText }}>
+                  {/* generous lineHeight: Arabic descenders (e.g. الصبح) must
+                      never clip at the bottom */}
+                  <Text
+                    className="font-extrabold mt-1"
+                    style={{ color: colors.addBtnText, fontSize: 30, lineHeight: 48 }}
+                  >
                     {t.athanNames[nextPrayer.name] ?? nextPrayer.name}
                   </Text>
                   <Text className="text-sm font-semibold mt-0.5" style={{ color: colors.addBtnText, opacity: 0.95 }}>
