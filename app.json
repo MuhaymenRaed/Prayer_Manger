@@ -25,7 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "app.yaqeen.com",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM"
@@ -85,8 +85,19 @@
       "./plugins/withForceLtr",
       "./plugins/withReleaseSigning",
       "./plugins/withReliableAlarms",
+      "./plugins/withResourceKeep",
       "expo-audio",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-keep class expo.modules.** { *; }\n-keep class com.facebook.jni.** { *; }"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
