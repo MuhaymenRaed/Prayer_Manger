@@ -38,6 +38,7 @@ import {
   scheduleAthanTest,
 } from "../../services/notificationService";
 import { saveLocation } from "../../services/storageService";
+import { useSyncStatus } from "../../services/syncStatus";
 import { SavedLocation } from "../../types/prayer";
 
 const DEFAULT_LAT = 31.9928;
@@ -226,6 +227,8 @@ function AccountCard({
   const providerLabel =
     provider === "google" ? t.settings.viaGoogle : t.settings.viaEmail;
   const initial = (name || user.email || "?").trim().charAt(0).toUpperCase();
+  const sync = useSyncStatus();
+  const syncFailed = sync.state === "error";
 
   return (
     <View className="p-5" style={{ backgroundColor: colors.settingRow }}>
@@ -296,24 +299,38 @@ function AccountCard({
         </View>
       </View>
 
-      {/* synced status */}
+      {/* real sync status — reflects the last push/pull, errors included */}
       <View
-        className="flex-row items-center gap-1.5 mt-4 px-3 py-2 rounded-xl"
+        className="flex-row items-start gap-1.5 mt-4 px-3 py-2 rounded-xl"
         style={{
-          backgroundColor: colors.successBg,
+          backgroundColor: syncFailed ? colors.dangerBg : colors.successBg,
           flexDirection: isRTL ? "row-reverse" : "row",
         }}
       >
         <Ionicons
-          name="cloud-done-outline"
+          name={
+            syncFailed
+              ? "cloud-offline-outline"
+              : sync.state === "syncing"
+                ? "cloud-upload-outline"
+                : "cloud-done-outline"
+          }
           size={15}
-          color={colors.successText}
+          color={syncFailed ? colors.dangerText : colors.successText}
+          style={{ marginTop: 1 }}
         />
         <Text
-          className="text-xs font-medium"
-          style={{ color: colors.successText }}
+          className="text-xs font-medium flex-1"
+          style={{
+            color: syncFailed ? colors.dangerText : colors.successText,
+            textAlign: isRTL ? "right" : "left",
+          }}
         >
-          {t.settings.accountSynced}
+          {syncFailed
+            ? `${t.settings.syncFailed}\n${sync.message ?? ""}`
+            : sync.state === "syncing"
+              ? t.settings.syncing
+              : t.settings.accountSynced}
         </Text>
       </View>
 

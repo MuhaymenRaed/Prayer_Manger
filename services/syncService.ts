@@ -24,7 +24,12 @@ export async function pushTracker(
     count: counts[key].missed,
     completed: counts[key].completed,
   }));
-  await supabase.from("qadha_counts").upsert(rows, { onConflict: "user_id,prayer" });
+  // supabase-js RESOLVES on failure (it returns {data,error}) — the error must
+  // be checked explicitly or every rejected write looks like a success.
+  const { error } = await supabase
+    .from("qadha_counts")
+    .upsert(rows, { onConflict: "user_id,prayer" });
+  if (error) throw new Error(`qadha_counts: ${error.message}`);
 }
 
 export async function pushSettings(
@@ -32,7 +37,7 @@ export async function pushSettings(
   settings: AppSettings,
   lang: Lang,
 ): Promise<void> {
-  await supabase.from("user_settings").upsert(
+  const { error } = await supabase.from("user_settings").upsert(
     {
       user_id: userId,
       theme: settings.themeMode ?? (settings.isDarkMode ? "dark" : "light"),
@@ -51,6 +56,7 @@ export async function pushSettings(
     },
     { onConflict: "user_id" },
   );
+  if (error) throw new Error(`user_settings: ${error.message}`);
 }
 
 // ─── Pull ────────────────────────────────────────────────────────────────────
@@ -71,6 +77,9 @@ export async function pullAll(userId: string): Promise<RemoteState> {
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
+
+  if (tracker.error) throw new Error(`read qadha_counts: ${tracker.error.message}`);
+  if (settings.error) throw new Error(`read user_settings: ${settings.error.message}`);
 
   let counts: TrackerCounts | null = null;
   if (tracker.data && tracker.data.length > 0) {

@@ -5,6 +5,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { useTracker } from "../contexts/TrackerContext";
 import { pullAll, pushSettings, pushTracker } from "../services/syncService";
+import { setSyncStatus } from "../services/syncStatus";
 
 /**
  * Headless cloud sync:
@@ -25,12 +26,14 @@ export function CloudSync() {
   useEffect(() => {
     if (!configured || !user) {
       pulledFor.current = null;
+      setSyncStatus({ state: "idle" });
       return;
     }
     if (pulledFor.current === user.id) return;
     pulledFor.current = user.id;
 
     (async () => {
+      setSyncStatus({ state: "syncing" });
       try {
         const remote = await pullAll(user.id);
         if (remote.counts) {
@@ -44,8 +47,14 @@ export function CloudSync() {
         } else {
           await pushSettings(user.id, settings, lang);
         }
-      } catch {
-        // best-effort; stays offline-capable
+        setSyncStatus({ state: "ok", syncedAt: Date.now() });
+      } catch (e) {
+        // Surfaced in Settings → account card. Never fail silently again.
+        pulledFor.current = null; // allow a retry on the next app open
+        setSyncStatus({
+          state: "error",
+          message: e instanceof Error ? e.message : String(e),
+        });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,8 +65,19 @@ export function CloudSync() {
     if (!configured || !user || pulledFor.current !== user.id) return;
     if (pushTimer.current) clearTimeout(pushTimer.current);
     pushTimer.current = setTimeout(() => {
-      pushTracker(user.id, counts).catch(() => {});
-      pushSettings(user.id, settings, lang).catch(() => {});
+      (async () => {
+        setSyncStatus({ state: "syncing" });
+        try {
+          await pushTracker(user.id, counts);
+          await pushSettings(user.id, settings, lang);
+          setSyncStatus({ state: "ok", syncedAt: Date.now() });
+        } catch (e) {
+          setSyncStatus({
+            state: "error",
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
+      })();
     }, 1200);
     return () => {
       if (pushTimer.current) clearTimeout(pushTimer.current);
