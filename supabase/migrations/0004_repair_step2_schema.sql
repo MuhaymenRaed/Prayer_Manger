@@ -51,16 +51,9 @@ create table if not exists public.qadha_counts (
   primary key (user_id, prayer)
 );
 
-create table if not exists public.user_locations (
-  id           uuid primary key default gen_random_uuid(),
-  user_id      uuid not null references auth.users (id) on delete cascade,
-  display_name text not null,
-  latitude     double precision not null,
-  longitude    double precision not null,
-  is_primary   boolean not null default true,
-  created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
-);
+-- NOTE: user_locations / prayer_logs / qadha_adjustments / devices are
+-- intentionally NOT created — no app code references them. The chosen city
+-- lives in user_settings.location_id. See 0005_drop_unused_tables.sql.
 
 -- ─── columns added by later app versions ─────────────────────────────────────
 alter table public.qadha_counts
@@ -94,15 +87,10 @@ drop trigger if exists trg_qadha_counts_updated on public.qadha_counts;
 create trigger trg_qadha_counts_updated before update on public.qadha_counts
   for each row execute function public.set_updated_at();
 
-drop trigger if exists trg_user_locations_updated on public.user_locations;
-create trigger trg_user_locations_updated before update on public.user_locations
-  for each row execute function public.set_updated_at();
-
 -- ─── Row Level Security: every user sees only their own rows ─────────────────
-alter table public.profiles       enable row level security;
-alter table public.user_settings  enable row level security;
-alter table public.qadha_counts   enable row level security;
-alter table public.user_locations enable row level security;
+alter table public.profiles      enable row level security;
+alter table public.user_settings enable row level security;
+alter table public.qadha_counts  enable row level security;
 
 -- profiles (own row keyed by id)
 drop policy if exists profiles_select_own on public.profiles;
@@ -133,16 +121,6 @@ create policy qadha_select_own on public.qadha_counts for select using (auth.uid
 create policy qadha_insert_own on public.qadha_counts for insert with check (auth.uid() = user_id);
 create policy qadha_update_own on public.qadha_counts for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy qadha_delete_own on public.qadha_counts for delete using (auth.uid() = user_id);
-
--- user_locations
-drop policy if exists locations_select_own on public.user_locations;
-drop policy if exists locations_insert_own on public.user_locations;
-drop policy if exists locations_update_own on public.user_locations;
-drop policy if exists locations_delete_own on public.user_locations;
-create policy locations_select_own on public.user_locations for select using (auth.uid() = user_id);
-create policy locations_insert_own on public.user_locations for insert with check (auth.uid() = user_id);
-create policy locations_update_own on public.user_locations for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy locations_delete_own on public.user_locations for delete using (auth.uid() = user_id);
 
 -- ─── auto-provision every NEW signup (this was missing) ──────────────────────
 create or replace function public.handle_new_user()
