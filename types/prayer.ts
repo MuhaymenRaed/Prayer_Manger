@@ -64,6 +64,11 @@ export interface AppSettings {
   athanMode: "notification" | "takbir";
   /** Selected athan sound id (see constants/athan.ts). */
   athanSoundId: string;
+  /**
+   * Schema version of the persisted settings. Lets a new build repair values
+   * written by older versions (stored values otherwise always win the merge).
+   */
+  settingsVersion?: number;
   /** id of the manually selected location, or "auto" for GPS. */
   locationId: string;
 }

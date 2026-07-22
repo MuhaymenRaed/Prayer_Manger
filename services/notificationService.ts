@@ -70,6 +70,16 @@ export async function ensureNotificationChannels(): Promise<void> {
           },
         );
       }
+
+      // Remove first-generation channels ("athan-*"). A channel's sound can
+      // never be changed after creation, so any device that created one
+      // before the sounds were bundled would stay silent forever otherwise.
+      const existing = await Notifications.getNotificationChannelsAsync();
+      await Promise.all(
+        existing
+          .filter((c) => c.id.startsWith("athan-"))
+          .map((c) => Notifications.deleteNotificationChannelAsync(c.id)),
+      );
     }
   }
 }

@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   // users can switch back to the plain notification tone in Settings.
   athanMode: "takbir",
   athanSoundId: "sound1",
+  settingsVersion: 2,
   locationId: DEFAULT_LOCATION_ID,
 };
 
@@ -89,13 +90,57 @@ export async function saveTrackerCounts(counts: TrackerCounts): Promise<void> {
   await AsyncStorage.setItem(KEYS.TRACKER, JSON.stringify(counts));
 }
 
+/**
+ * Current settings schema version.
+ *
+ * v2 — repairs the takbir bug: earlier builds shipped `athanMode:
+ * "notification"` (and a 3-mode version could store "full"). Because the
+ * merge below lets stored values win, those devices kept routing prayer
+ * alerts to the plain "prayers" channel forever — the notification arrived
+ * but the takbir never played. Migrating once restores the intended
+ * default; the user's own later choice is then respected.
+ */
+export const SETTINGS_VERSION = 2;
+
+const VALID_ATHAN_MODES: AppSettings["athanMode"][] = ["takbir", "notification"];
+
+function normalizeSettings(raw: Partial<AppSettings>): AppSettings {
+  const merged: AppSettings = { ...DEFAULT_SETTINGS, ...raw };
+  const storedVersion = Number(raw.settingsVersion ?? 0);
+
+  // One-time repair of values written before the takbir wiring was fixed.
+  if (storedVersion < 2) {
+    merged.athanMode = DEFAULT_SETTINGS.athanMode;
+    merged.athanSoundId = DEFAULT_SETTINGS.athanSoundId;
+  }
+
+  // Guard against any unknown/legacy value (e.g. the removed "full" mode).
+  if (!VALID_ATHAN_MODES.includes(merged.athanMode)) {
+    merged.athanMode = DEFAULT_SETTINGS.athanMode;
+  }
+  if (typeof merged.athanSoundId !== "string" || !merged.athanSoundId) {
+    merged.athanSoundId = DEFAULT_SETTINGS.athanSoundId;
+  }
+
+  merged.settingsVersion = SETTINGS_VERSION;
+  return merged;
+}
+
 export async function getSettings(): Promise<AppSettings> {
   try {
     const data = await AsyncStorage.getItem(KEYS.SETTINGS);
-    if (!data) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    if (!data) return { ...DEFAULT_SETTINGS, settingsVersion: SETTINGS_VERSION };
+    const parsed = JSON.parse(data) as Partial<AppSettings>;
+    const normalized = normalizeSettings(parsed);
+    // Persist the repair so it happens exactly once.
+    if (Number(parsed.settingsVersion ?? 0) < SETTINGS_VERSION) {
+      await AsyncStorage.setItem(KEYS.SETTINGS, JSON.stringify(normalized)).catch(
+        () => {},
+      );
+    }
+    return normalized;
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, settingsVersion: SETTINGS_VERSION };
   }
 }
 
