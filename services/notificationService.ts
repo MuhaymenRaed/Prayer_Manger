@@ -101,19 +101,47 @@ export async function scheduleAthanTest(
   body: string,
 ): Promise<void> {
   await ensureNotificationChannels();
+  // Deliberately identical to a real prayer alert: same channel, same sound
+  // value and the same DATE trigger — so if this plays, prayers will too.
   await Notifications.scheduleNotificationAsync({
     content: {
       title,
       body,
-      sound: Platform.OS === "ios" ? getAthanSound(soundId).file : true,
+      sound: getAthanSound(soundId).file,
       data: { kind: "test" as Kind },
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: 2,
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(Date.now() + 5000),
       channelId: athanChannelId("takbir", soundId),
     },
   });
+}
+
+/**
+ * What is ACTUALLY scheduled right now — used by the in-app diagnostic so a
+ * silent alert can be traced to a channel instead of guessed at.
+ */
+export async function describeScheduledPrayerAlerts(): Promise<{
+  count: number;
+  channelId: string | null;
+  nextAt: Date | null;
+}> {
+  const all = await Notifications.getAllScheduledNotificationsAsync();
+  const prayers = all.filter(
+    (n) => (n.content.data as { kind?: Kind } | null)?.kind === "prayer",
+  );
+  let channelId: string | null = null;
+  let nextAt: Date | null = null;
+  const trigger = prayers[0]?.trigger as
+    | { channelId?: string; value?: number; date?: number }
+    | undefined;
+  if (trigger) {
+    channelId = trigger.channelId ?? null;
+    const ts = trigger.value ?? trigger.date;
+    if (typeof ts === "number") nextAt = new Date(ts);
+  }
+  return { count: prayers.length, channelId, nextAt };
 }
 
 /** Cancel only notifications previously scheduled with a given `kind`. */
@@ -146,12 +174,18 @@ export async function schedulePrayerNotifications(
   const now = new Date();
 
   const useAthan = HAS_ATHAN_AUDIO && athan?.mode === "takbir";
-  // Android: sound comes from the per-sound channel. iOS: per-notification.
   const channelId = useAthan
     ? athanChannelId("takbir", athan!.soundId)
     : "prayers";
-  const iosSound: string | boolean =
-    useAthan && Platform.OS === "ios" ? getAthanSound(athan!.soundId).file : true;
+
+  // Send the FILENAME, never `true`. expo maps a boolean to
+  // useDefaultSound(), which stamps the system tone onto the notification —
+  // and ColorOS/MIUI honour that over the channel's custom sound, which is
+  // exactly why the takbir was replaced by the default beep. A string makes
+  // SoundResolver emit a real android.resource:// URI for raw/<sound>.
+  const soundValue: string | boolean = useAthan
+    ? getAthanSound(athan!.soundId).file
+    : true;
 
   for (const prayer of prayers) {
     if (prayer.isInformational || prayer.isPassed) continue;
@@ -163,7 +197,7 @@ export async function schedulePrayerNotifications(
       content: {
         title,
         body,
-        sound: iosSound,
+        sound: soundValue,
         data: { kind: "prayer" as Kind, prayer: prayer.name },
       },
       trigger: {

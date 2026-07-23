@@ -42,8 +42,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const persist = useCallback(async (next: AppSettings) => {
-    setSettings(next);
+    // Write BEFORE updating state: the state change re-runs the notification
+    // rescheduler, which reads settings back from storage. Setting state first
+    // let it read the previous value and reschedule with a stale athan sound.
     await saveSettings(next);
+    setSettings(next);
   }, []);
 
   const updateSetting = useCallback(

@@ -34,6 +34,7 @@ import { useSettings } from "../../contexts/SettingsContext";
 import { useTheme } from "../../contexts/ThemeContext";
 
 import {
+  describeScheduledPrayerAlerts,
   dismissPinnedTimes,
   scheduleAthanTest,
 } from "../../services/notificationService";
@@ -502,6 +503,25 @@ export default function SettingsScreen() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [privacyVisible, setPrivacyVisible] = useState(false);
   const [aboutVisible, setAboutVisible] = useState(false);
+  const [diag, setDiag] = useState<string | null>(null);
+
+  // Diagnostic: report what is REALLY scheduled and on which channel, so a
+  // silent prayer alert can be traced instead of guessed at.
+  const refreshDiag = useCallback(async () => {
+    try {
+      const d = await describeScheduledPrayerAlerts();
+      const when = d.nextAt
+        ? d.nextAt.toLocaleString(lang === "ar" ? "ar" : "en-US")
+        : "—";
+      setDiag(`${d.count} · ${d.channelId ?? "—"} · ${when}`);
+    } catch {
+      setDiag(null);
+    }
+  }, [lang]);
+
+  useEffect(() => {
+    if (settings.athanMode === "takbir") refreshDiag();
+  }, [settings.athanMode, settings.athanSoundId, refreshDiag]);
 
   const SUPPORT_EMAIL = "yaqeenal3lm@gmail.com";
   const SUPPORT_PHONE = "9647778742041";
@@ -857,6 +877,26 @@ export default function SettingsScreen() {
                   color={colors.tint}
                 />
               </TouchableOpacity>
+
+              {/* what is really scheduled: count · channel · next alert */}
+              {!!diag && (
+                <TouchableOpacity
+                  className="px-5 py-2"
+                  style={{ backgroundColor: colors.settingRow }}
+                  onPress={refreshDiag}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    className="text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                      textAlign: isRTL ? "right" : "left",
+                    }}
+                  >
+                    {diag}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {ATHAN_SOUNDS.map((s, i) => {
                 const selected = settings.athanSoundId === s.id;
