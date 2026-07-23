@@ -45,6 +45,9 @@ import { SavedLocation } from "../../types/prayer";
 const DEFAULT_LAT = 31.9928;
 const DEFAULT_LON = 44.3357;
 
+/** Set true to show the scheduled-alerts diagnostic under صوت الأذان. */
+const SHOW_SCHEDULE_DIAGNOSTIC = false;
+
 type Colors = ReturnType<typeof useTheme>["colors"];
 
 // â”€â”€â”€ Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -878,8 +881,10 @@ export default function SettingsScreen() {
                 />
               </TouchableOpacity>
 
-              {/* what is really scheduled: count · channel · next alert */}
-              {!!diag && (
+              {/* Scheduling diagnostic (count · channel · next alert) is kept
+                  in code for troubleshooting but hidden from the UI. Flip
+                  SHOW_SCHEDULE_DIAGNOSTIC to surface it again. */}
+              {SHOW_SCHEDULE_DIAGNOSTIC && !!diag && (
                 <TouchableOpacity
                   className="px-5 py-2"
                   style={{ backgroundColor: colors.settingRow }}

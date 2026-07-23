@@ -159,7 +159,45 @@ export interface PrayerNotifContent {
   body: string;
 }
 
+/**
+ * Stable id for one prayer occurrence, e.g. "prayer-20260723-Maghrib".
+ * Re-scheduling REPLACES the entry instead of adding a second one, so a
+ * duplicate alert is impossible even if two passes overlap.
+ */
+function prayerNotifId(prayer: PrayerTimeInfo): string {
+  const d = prayer.time;
+  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
+  return `prayer-${stamp}-${prayer.name}`;
+}
+
+/**
+ * Serialises scheduling passes. Several callers (startup manager, the
+ * prayer-times screen, the background task) can fire at once; each begins by
+ * cancelling the previous alerts, so without this a second pass could read
+ * the "already cancelled" list before the first had re-scheduled and both
+ * would then insert a full set — which is how 109 alerts accumulated.
+ */
+let schedulingChain: Promise<unknown> = Promise.resolve();
+function serialize<T>(fn: () => Promise<T>): Promise<T> {
+  const next = schedulingChain.then(fn, fn);
+  schedulingChain = next.catch(() => undefined);
+  return next;
+}
+
 export async function schedulePrayerNotifications(
+  prayers: PrayerTimeInfo[],
+  withVibration: boolean,
+  buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
+  athan?: { mode: AthanMode; soundId: string },
+): Promise<void> {
+  return serialize(() =>
+    schedulePrayerNotificationsUnsafe(prayers, withVibration, buildContent, athan),
+  );
+}
+
+async function schedulePrayerNotificationsUnsafe(
   prayers: PrayerTimeInfo[],
   withVibration: boolean,
   buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
@@ -168,7 +206,8 @@ export async function schedulePrayerNotifications(
   // Channels must exist before anything is scheduled onto them.
   await ensureNotificationChannels();
 
-  // Cancel only previous prayer alerts, preserving motivation/quran ones.
+  // Clears anything left by older builds (which used random ids); current
+  // entries are keyed deterministically and simply get replaced below.
   await cancelByKind("prayer");
 
   const now = new Date();
@@ -194,6 +233,7 @@ export async function schedulePrayerNotifications(
     const { title, body } = buildContent(prayer);
 
     await Notifications.scheduleNotificationAsync({
+      identifier: prayerNotifId(prayer),
       content: {
         title,
         body,
