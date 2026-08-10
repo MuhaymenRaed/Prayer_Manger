@@ -72,6 +72,8 @@ export const T = {
         "The shar'i method: count the MINIMUM period you are certain about. Example: if you doubt whether you owe 3 or 5 years, take 3 — the certain minimum. The result is approximate, based on the Gregorian year (365 days) and a 30-day month.",
       calcAyatNote:
         "Note: Salat al-Ayat is NOT included in this calculation — ask about it based on the missed years and enter its count manually in its own card.",
+      lastUpdated: (when: string) => `Last updated ${when}`,
+      lastUpdatedNever: "Not updated yet",
       calcYears: "Years",
       calcMonths: "Months",
       calcDays: "Days",
@@ -367,6 +369,8 @@ export const T = {
         "الطريقة الشرعية: احسب أقل مدة متيقّن بها في ذمتك. مثال: إن شككت أن عليك ٣ أو ٥ سنين، فاختر ٣ — الأقل المتيقّن. الحساب تقريبي على أساس السنة الميلادية (٣٦٥ يوماً) والشهر (٣٠ يوماً).",
       calcAyatNote:
         "ملاحظة: لا تُحتسب صلاة الآيات ضمن هذه الحاسبة — يُسأل عنها بحسب السنوات الفائتة وتُدخل قيمتها يدوياً في بطاقتها الخاصة.",
+      lastUpdated: (when: string) => `آخر تحديث ${when}`,
+      lastUpdatedNever: "لم يُحدَّث بعد",
       calcYears: "سنوات",
       calcMonths: "أشهر",
       calcDays: "أيام",

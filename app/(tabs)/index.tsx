@@ -19,6 +19,7 @@ import { YaqeenLogoBox } from "../../components/YaqeenLogo";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { remaining, useTracker } from "../../contexts/TrackerContext";
+import { formatRelativeTime } from "../../services/relativeTime";
 import { TrackerKey } from "../../types/prayer";
 
 // ─── Animated progress bar ───────────────────────────────────────────────────
@@ -81,7 +82,7 @@ function PrayerCard({
   onEditTotal: (key: TrackerKey) => void;
 }) {
   const { colors } = useTheme();
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, lang } = useLanguage();
   const { counts, markCompleted, addMissed, resetOne } = useTracker();
   const dialog = useDialog();
 
@@ -94,6 +95,7 @@ function PrayerCard({
   const pct = progress.missed > 0 ? progress.completed / progress.missed : 0;
   const isDone = progress.missed > 0 && left === 0;
   const isEmpty = progress.missed === 0;
+  const lastEdit = formatRelativeTime(progress.updatedAt, lang);
 
   const flash = useRef(new Animated.Value(0)).current;
   const [flashColor, setFlashColor] = useState(colors.success);
@@ -245,6 +247,21 @@ function PrayerCard({
               height={6}
             />
 
+            {/* last edit — tells the user how long since they last updated,
+                so they know how many missed days may still need adding */}
+            {!!lastEdit && (
+              <Text
+                className="text-[9px] mt-1.5 w-full"
+                style={{
+                  color: colors.textMuted,
+                  textAlign: "center",
+                }}
+                numberOfLines={1}
+              >
+                {t.tracker.lastUpdated(lastEdit)}
+              </Text>
+            )}
+
             {/* actions */}
             <View
               className="flex-row items-center justify-between mt-3 gap-1.5"
@@ -297,18 +314,21 @@ function SetTotalModal({
   visibleKey,
   label,
   initial,
+  updatedAt,
   onClose,
   onSave,
 }: {
   visibleKey: TrackerKey | null;
   label: string;
   initial: number;
+  updatedAt?: number;
   onClose: () => void;
   onSave: (value: number) => void;
 }) {
   const { colors } = useTheme();
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, lang } = useLanguage();
   const [val, setVal] = useState(String(initial));
+  const lastEdit = formatRelativeTime(updatedAt, lang);
 
   useEffect(() => {
     setVal(String(initial));
@@ -353,11 +373,25 @@ function SetTotalModal({
             {t.tracker.setTotalTitle(label)}
           </Text>
           <Text
-            className="text-xs mb-4"
+            className="text-xs mb-2"
             style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
           >
             {t.tracker.setTotalMsg}
           </Text>
+
+          {/* when this prayer was last edited — the reference point for
+              working out how many missed days to add now */}
+          <View
+            className="flex-row items-center gap-1.5 mb-4"
+            style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
+          >
+            <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+            <Text className="text-[11px]" style={{ color: colors.textMuted }}>
+              {lastEdit
+                ? t.tracker.lastUpdated(lastEdit)
+                : t.tracker.lastUpdatedNever}
+            </Text>
+          </View>
 
           {/* stepper input */}
           <View className="flex-row items-center gap-3 mb-5">
@@ -551,6 +585,7 @@ export default function TrackerScreen() {
         visibleKey={editingKey}
         label={editingKey ? labelFor(editingKey) : ""}
         initial={editingKey ? counts[editingKey].missed : 0}
+        updatedAt={editingKey ? counts[editingKey].updatedAt : undefined}
         onClose={() => setEditingKey(null)}
         onSave={(value) => {
           if (editingKey) setMissed(editingKey, value);

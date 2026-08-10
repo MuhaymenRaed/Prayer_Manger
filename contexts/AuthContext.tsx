@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Session, User } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
@@ -118,6 +119,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Clear the "already restored on this device" marker so the NEXT explicit
+    // sign-in performs a fresh one-time pull (app launches never re-pull).
+    await AsyncStorage.removeItem("@yaqeen_pulled_for").catch(() => {});
     await supabase.auth.signOut();
   }, []);
 

@@ -66,7 +66,9 @@ function normalizeProgress(value: unknown): PrayerProgress {
       missed,
       Math.max(0, Math.floor(Number(v.completed) || 0)),
     );
-    return { missed, completed };
+    const updatedAt =
+      typeof v.updatedAt === "number" && v.updatedAt > 0 ? v.updatedAt : undefined;
+    return { missed, completed, updatedAt };
   }
   return ZERO();
 }

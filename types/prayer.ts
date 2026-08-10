@@ -27,6 +27,12 @@ export interface PrayerTimeInfo {
 export interface PrayerProgress {
   missed: number;
   completed: number;
+  /**
+   * Epoch ms of the last edit to this prayer's counters. Surfaced in the UI
+   * so the user can see how long ago they last updated — which tells them
+   * how many missed days may still need adding.
+   */
+  updatedAt?: number;
 }
 
 export interface TrackerCounts {

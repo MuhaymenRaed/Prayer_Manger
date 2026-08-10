@@ -67,7 +67,10 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
     async (key: TrackerKey, value: number) => {
       const missed = Math.max(0, Math.floor(value));
       const completed = Math.min(counts[key].completed, missed);
-      await persist({ ...counts, [key]: { missed, completed } });
+      await persist({
+        ...counts,
+        [key]: { missed, completed, updatedAt: Date.now() },
+      });
     },
     [counts, persist],
   );
@@ -76,7 +79,10 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
     async (key: TrackerKey): Promise<number> => {
       const cur = counts[key];
       const completed = Math.min(cur.missed, cur.completed + 1);
-      const next = { ...counts, [key]: { ...cur, completed } };
+      const next = {
+        ...counts,
+        [key]: { ...cur, completed, updatedAt: Date.now() },
+      };
       await persist(next);
       return remaining(next[key]);
     },
@@ -87,7 +93,10 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
     async (key: TrackerKey) => {
       const cur = counts[key];
       const completed = Math.max(0, cur.completed - 1);
-      await persist({ ...counts, [key]: { ...cur, completed } });
+      await persist({
+        ...counts,
+        [key]: { ...cur, completed, updatedAt: Date.now() },
+      });
     },
     [counts, persist],
   );
@@ -96,7 +105,10 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
     async (key: TrackerKey, amount = 1): Promise<number> => {
       const cur = counts[key];
       const missed = Math.max(0, cur.missed + amount);
-      const next = { ...counts, [key]: { ...cur, missed } };
+      const next = {
+        ...counts,
+        [key]: { ...cur, missed, updatedAt: Date.now() },
+      };
       await persist(next);
       return remaining(next[key]);
     },
@@ -105,7 +117,7 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
 
   const resetOne = useCallback(
     async (key: TrackerKey) => {
-      await persist({ ...counts, [key]: ZERO() });
+      await persist({ ...counts, [key]: { ...ZERO(), updatedAt: Date.now() } });
     },
     [counts, persist],
   );

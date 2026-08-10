@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
+  AppState,
   RefreshControl,
   ScrollView,
   Text,
@@ -26,6 +28,7 @@ import {
 import {
   formatDate,
   formatTime,
+  getNextUpcomingPrayer,
   getShiaPrayerTimes,
 } from "../../services/prayerTimesService";
 import { getSavedLocation, saveLocation } from "../../services/storageService";
@@ -308,19 +311,38 @@ export default function PrayerTimesScreen() {
     };
   }, [settings.locationId, lang, reloadKey, apply, t]);
 
-  // Minute tick: refresh countdown / passed flags + the pinned bar countdown.
+  // Recompute "now" + today's times. Used by the minute tick, by app
+  // foreground and by tab focus.
   const tzRef = useRef(timezone);
   tzRef.current = timezone;
-  useEffect(() => {
-    const id = setInterval(() => {
-      setToday(new Date());
-      const { lat, lon } = coordsRef.current;
-      const r = getShiaPrayerTimes(lat, lon);
-      setResult(r);
-      updatePinned();
-    }, 60000);
-    return () => clearInterval(id);
+  const refreshNow = useCallback(() => {
+    setToday(new Date());
+    const { lat, lon } = coordsRef.current;
+    setResult(getShiaPrayerTimes(lat, lon));
+    updatePinned();
   }, [updatePinned]);
+
+  useEffect(() => {
+    const id = setInterval(refreshNow, 60000);
+    return () => clearInterval(id);
+  }, [refreshNow]);
+
+  // Android suspends JS timers while the app is backgrounded, so the minute
+  // tick can be long dead by the time the user returns — leaving a stale
+  // (or missing) hero until the app was restarted. Recompute immediately on
+  // resume and whenever this tab regains focus.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshNow();
+    });
+    return () => sub.remove();
+  }, [refreshNow]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshNow();
+    }, [refreshNow]),
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -343,16 +365,16 @@ export default function PrayerTimesScreen() {
     return true;
   });
 
-  // Next prayer for the hero/badge — respects the user's preferences: when
-  // Asr & Isha are hidden (praying jam'), skip them (Dhuhr → Maghrib).
-  const nowMs = today.getTime();
-  const nextPrayer =
-    prayers.find(
-      (p) =>
-        !p.isInformational &&
-        (settings.showAsrIsha || (p.name !== "Asr" && p.name !== "Isha")) &&
-        p.time.getTime() > nowMs,
-    ) ?? null;
+  // Next prayer for the hero/badge — respects the user's preferences (when
+  // Asr & Isha are hidden for jam', Dhuhr → Maghrib) and rolls over into
+  // TOMORROW. Searching only today's list left the hero blank every night
+  // after the last prayer, until the app was restarted.
+  const nextPrayer = getNextUpcomingPrayer(
+    coordsRef.current.lat,
+    coordsRef.current.lon,
+    settings.showAsrIsha,
+    today,
+  );
 
   // Localized remaining time for the hero (recomputes on each minute tick).
   const minsToNext = nextPrayer
