@@ -74,6 +74,18 @@ export const T = {
         "Note: Salat al-Ayat is NOT included in this calculation — ask about it based on the missed years and enter its count manually in its own card.",
       lastUpdated: (when: string) => `Last updated ${when}`,
       lastUpdatedNever: "Not updated yet",
+      // untracked-days prompt (first ✓ after days away from the tracker)
+      untrackedTitle: "Days you didn't track",
+      untrackedMsg: (name: string, days: number) =>
+        `You haven't updated ${name} for ${days} days. If you kept praying one a day, fill them all in at once.`,
+      untrackedDays: "days without tracking",
+      untrackedFillHint: (fill: number, days: number) =>
+        fill < days
+          ? `Only ${fill} left to make up — filling completes this prayer.`
+          : `Marks ${fill} prayers as made up.`,
+      untrackedFill: (n: number) => `Fill ${n} days`,
+      untrackedLater: "Not now",
+      untrackedPill: (n: number) => `Fill ${n} untracked days`,
       calcYears: "Years",
       calcMonths: "Months",
       calcDays: "Days",
@@ -121,6 +133,9 @@ export const T = {
       notifications: "Notifications",
       prayerNotif: "Prayer Notifications",
       prayerNotifDesc: "Get notified when it's prayer time",
+      alertPrayers: "Alert for these prayers",
+      alertPrayersDesc:
+        "Tap a prayer to turn its alert on or off. Asr and Isha are off by default for those who pray them combined.",
       sound: "Sound",
       soundDesc: "Play adhan sound for prayer times",
       vibration: "Vibration",
@@ -371,6 +386,18 @@ export const T = {
         "ملاحظة: لا تُحتسب صلاة الآيات ضمن هذه الحاسبة — يُسأل عنها بحسب السنوات الفائتة وتُدخل قيمتها يدوياً في بطاقتها الخاصة.",
       lastUpdated: (when: string) => `آخر تحديث ${when}`,
       lastUpdatedNever: "لم يُحدَّث بعد",
+      // نافذة الأيام غير المسجّلة (أول ✓ بعد أيام من الغياب عن المتتبع)
+      untrackedTitle: "أيام لم تُسجّلها",
+      untrackedMsg: (name: string, days: number) =>
+        `لم تحدّث ${name} منذ ${days} أيام. إن واصلت قضاء واحدة كل يوم، فاملأها كلها دفعة واحدة.`,
+      untrackedDays: "أيام بلا تسجيل",
+      untrackedFillHint: (fill: number, days: number) =>
+        fill < days
+          ? `لم يبقَ سوى ${fill} للقضاء — الملء يُتمّ هذه الصلاة.`
+          : `سيُحتسب ${fill} صلاة مقضيّة.`,
+      untrackedFill: (n: number) => `املأ ${n} أيام`,
+      untrackedLater: "ليس الآن",
+      untrackedPill: (n: number) => `املأ ${n} أيام غير مسجّلة`,
       calcYears: "سنوات",
       calcMonths: "أشهر",
       calcDays: "أيام",
@@ -419,6 +446,9 @@ export const T = {
       notifications: "الإشعارات",
       prayerNotif: "إشعارات الصلاة",
       prayerNotifDesc: "تلقي إشعار عند حلول وقت الصلاة",
+      alertPrayers: "الصلوات المُنبَّه لها",
+      alertPrayersDesc:
+        "اضغط على الصلاة لتفعيل تنبيهها أو إيقافه. العصر والعشاء متوقفان افتراضياً لمن يصلّيهما جمعاً.",
       sound: "الصوت",
       soundDesc: "تشغيل صوت الأذان عند أوقات الصلاة",
       vibration: "الاهتزاز",

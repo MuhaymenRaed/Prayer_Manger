@@ -79,6 +79,7 @@ export async function refreshAlertWindow(): Promise<void> {
       };
     },
     { mode: settings.athanMode, soundId: settings.athanSoundId },
+    settings.alertPrayers,
   );
 }
 

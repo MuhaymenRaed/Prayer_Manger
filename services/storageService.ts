@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DEFAULT_LOCATION_ID } from "../constants/locations";
 import {
+  AlertablePrayer,
   AppSettings,
   PrayerProgress,
   SavedLocation,
@@ -34,6 +35,15 @@ const TRACKER_KEYS: TrackerKey[] = [
   "ayat",
 ];
 
+/** Display order of the per-prayer alert toggles. */
+export const ALERTABLE_PRAYERS: AlertablePrayer[] = [
+  "Fajr",
+  "Dhuhr",
+  "Asr",
+  "Maghrib",
+  "Isha",
+];
+
 export const DEFAULT_SETTINGS: AppSettings = {
   isDarkMode: true,
   themeMode: "dark",
@@ -43,6 +53,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   motivation: true,
   quranDaily: true,
   pinnedTimes: true,
+  // Asr & Isha off by default — commonly prayed combined with Dhuhr / Maghrib.
+  alertPrayers: { Fajr: true, Dhuhr: true, Asr: false, Maghrib: true, Isha: false },
   showAsrIsha: true,
   showSunEvents: true,
   // Takbir plays with the prayer notification by default (sound 1);
@@ -122,6 +134,18 @@ function normalizeSettings(raw: Partial<AppSettings>): AppSettings {
   }
   if (typeof merged.athanSoundId !== "string" || !merged.athanSoundId) {
     merged.athanSoundId = DEFAULT_SETTINGS.athanSoundId;
+  }
+
+  // Per-prayer alert map: fill any prayer missing from the stored object
+  // (older builds had none) with its default, and coerce to booleans.
+  const storedAlerts = (raw.alertPrayers ?? {}) as Partial<
+    Record<AlertablePrayer, unknown>
+  >;
+  merged.alertPrayers = { ...DEFAULT_SETTINGS.alertPrayers };
+  for (const p of ALERTABLE_PRAYERS) {
+    if (typeof storedAlerts[p] === "boolean") {
+      merged.alertPrayers[p] = storedAlerts[p] as boolean;
+    }
   }
 
   merged.settingsVersion = SETTINGS_VERSION;

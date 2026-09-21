@@ -419,7 +419,7 @@ export default function PrayerTimesScreen() {
         {/* Next-prayer hero with mosque silhouette */}
         {nextPrayer && (
           <View className="rounded-3xl mb-4 overflow-hidden" style={{ backgroundColor: colors.tint }}>
-            <View className="p-5 pb-8">
+            <View className="p-5 pb-10">
               <View
                 className="flex-row items-center justify-between"
                 style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
@@ -459,7 +459,7 @@ export default function PrayerTimesScreen() {
             </View>
             {/* decorative mosque skyline */}
             <View className="absolute left-0 right-0 bottom-0" pointerEvents="none">
-              <MosqueSilhouette color="#FFFFFF" opacity={0.15} height={64} />
+              <MosqueSilhouette color="#FFFFFF" opacity={0.2} height={90} />
             </View>
           </View>
         )}

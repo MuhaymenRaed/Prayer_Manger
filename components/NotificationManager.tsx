@@ -26,13 +26,15 @@ export function NotificationManager() {
   const { t, lang } = useLanguage();
 
   // Prayer alerts + pinned bar — on startup and whenever anything relevant
-  // changes (athan sound/mode, location, language, visibility prefs).
+  // changes (athan sound/mode, per-prayer switches, location, language,
+  // visibility prefs).
   // The shared refresher reads settings/language from storage, so it also
   // powers the headless background task with identical behavior.
   useEffect(() => {
     refreshAllAlerts().catch(() => {});
   }, [
     settings.prayerNotifications,
+    settings.alertPrayers,
     settings.vibration,
     settings.athanMode,
     settings.athanSoundId,

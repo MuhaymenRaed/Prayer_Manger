@@ -47,6 +47,9 @@ export interface TrackerCounts {
 
 export type TrackerKey = keyof TrackerCounts;
 
+/** The five daily prayers that can raise a prayer-time alert. */
+export type AlertablePrayer = "Fajr" | "Dhuhr" | "Asr" | "Maghrib" | "Isha";
+
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface AppSettings {
@@ -62,6 +65,12 @@ export interface AppSettings {
   quranDaily: boolean;
   /** Persistent notification pinned with today's prayer times. */
   pinnedTimes: boolean;
+  /**
+   * Which of the five daily prayers get a prayer-time alert. Asr and Isha
+   * default to off — most users pray them combined with Dhuhr / Maghrib.
+   * Device-local for now (not part of the cloud settings sync).
+   */
+  alertPrayers: Record<AlertablePrayer, boolean>;
   /** Show Asr & Isha rows on the prayer-times page. */
   showAsrIsha: boolean;
   /** Show Sunrise / Sunset / Midnight reference rows. */

@@ -20,8 +20,11 @@ interface TrackerContextValue {
   totalCompleted: number;
   /** Set the absolute number of missed prayers for one category. */
   setMissed: (key: TrackerKey, value: number) => Promise<void>;
-  /** Mark one prayer as made up (qadha). Returns remaining for that key. */
-  markCompleted: (key: TrackerKey) => Promise<number>;
+  /**
+   * Mark `amount` prayers as made up (qadha), default one. Capped at the
+   * missed total. Returns remaining for that key.
+   */
+  markCompleted: (key: TrackerKey, amount?: number) => Promise<number>;
   /** Undo a made-up prayer (in case of mistake). */
   undoCompleted: (key: TrackerKey) => Promise<void>;
   /** Record a newly missed prayer/day. Returns remaining for that key. */
@@ -76,9 +79,10 @@ export function TrackerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const markCompleted = useCallback(
-    async (key: TrackerKey): Promise<number> => {
+    async (key: TrackerKey, amount = 1): Promise<number> => {
       const cur = counts[key];
-      const completed = Math.min(cur.missed, cur.completed + 1);
+      const step = Math.max(1, Math.floor(amount));
+      const completed = Math.min(cur.missed, cur.completed + step);
       const next = {
         ...counts,
         [key]: { ...cur, completed, updatedAt: Date.now() },

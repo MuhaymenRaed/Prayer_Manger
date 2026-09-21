@@ -19,7 +19,7 @@ import { YaqeenLogoBox } from "../../components/YaqeenLogo";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { remaining, useTracker } from "../../contexts/TrackerContext";
-import { formatRelativeTime } from "../../services/relativeTime";
+import { daysSince, formatRelativeTime } from "../../services/relativeTime";
 import { TrackerKey } from "../../types/prayer";
 
 // ─── Animated progress bar ───────────────────────────────────────────────────
@@ -75,11 +75,16 @@ const PRAYER_ICONS: Record<string, React.ComponentProps<typeof Ionicons>["name"]
 function PrayerCard({
   prayerKey,
   label,
+  gapDismissed,
   onEditTotal,
+  onOpenGap,
 }: {
   prayerKey: TrackerKey;
   label: string;
+  /** The user closed this prayer's untracked-days prompt without filling. */
+  gapDismissed: boolean;
   onEditTotal: (key: TrackerKey) => void;
+  onOpenGap: (key: TrackerKey) => void;
 }) {
   const { colors } = useTheme();
   const { t, isRTL, lang } = useLanguage();
@@ -96,6 +101,10 @@ function PrayerCard({
   const isDone = progress.missed > 0 && left === 0;
   const isEmpty = progress.missed === 0;
   const lastEdit = formatRelativeTime(progress.updatedAt, lang);
+  // days away from this prayer's counters. 2+ means at least one whole day
+  // went untracked before today, which is worth offering to fill in bulk.
+  const gapDays = daysSince(progress.updatedAt);
+  const hasGap = gapDays >= 2 && left > 0;
 
   const flash = useRef(new Animated.Value(0)).current;
   const [flashColor, setFlashColor] = useState(colors.success);
@@ -115,10 +124,27 @@ function PrayerCard({
 
   const handlePrayed = useCallback(async () => {
     if (left <= 0) return;
+    // first ✓ after days away: offer to fill the whole gap instead of one.
+    // Once the prompt is closed, ✓ goes back to marking a single prayer and
+    // the note under the bar becomes the way to reopen it.
+    if (hasGap && !gapDismissed) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onOpenGap(prayerKey);
+      return;
+    }
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await markCompleted(prayerKey);
     runFlash(colors.success);
-  }, [left, markCompleted, prayerKey, runFlash, colors.success]);
+  }, [
+    left,
+    hasGap,
+    gapDismissed,
+    onOpenGap,
+    markCompleted,
+    prayerKey,
+    runFlash,
+    colors.success,
+  ]);
 
   const handleMissed = useCallback(async () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -248,18 +274,47 @@ function PrayerCard({
             />
 
             {/* last edit — tells the user how long since they last updated,
-                so they know how many missed days may still need adding */}
-            {!!lastEdit && (
-              <Text
-                className="text-[9px] mt-1.5 w-full"
-                style={{
-                  color: colors.textMuted,
-                  textAlign: "center",
-                }}
-                numberOfLines={1}
-              >
-                {t.tracker.lastUpdated(lastEdit)}
-              </Text>
+                so they know how many missed days may still need adding.
+                After the untracked-days prompt is closed it turns into a
+                pill that reopens it, in case that was a mis-tap. */}
+            {hasGap && gapDismissed ? (
+              <View className="items-center mt-1.5">
+                <TouchableOpacity
+                  className="flex-row items-center gap-1 rounded-full border px-2.5 py-1"
+                  style={{
+                    flexDirection: isRTL ? "row-reverse" : "row",
+                    backgroundColor: colors.warnBg,
+                    borderColor: colors.warn,
+                  }}
+                  onPress={() => onOpenGap(prayerKey)}
+                  activeOpacity={0.7}
+                  hitSlop={6}
+                >
+                  <Ionicons name="calendar-outline" size={10} color={colors.warnText} />
+                  <Text
+                    className="text-[9px] font-bold"
+                    style={{ color: colors.warnText, flexShrink: 1 }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
+                  >
+                    {t.tracker.untrackedPill(gapDays)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              !!lastEdit && (
+                <Text
+                  className="text-[9px] mt-1.5 w-full"
+                  style={{
+                    color: colors.textMuted,
+                    textAlign: "center",
+                  }}
+                  numberOfLines={1}
+                >
+                  {t.tracker.lastUpdated(lastEdit)}
+                </Text>
+              )
             )}
 
             {/* actions */}
@@ -456,13 +511,155 @@ function SetTotalModal({
   );
 }
 
+// ─── Untracked-days modal ────────────────────────────────────────────────────
+// Shown on the first ✓ after the user has been away from a prayer's counters
+// for 2+ days: fill every untracked day at once, or close and log manually.
+function UntrackedDaysModal({
+  visibleKey,
+  label,
+  days,
+  fill,
+  onClose,
+  onFill,
+}: {
+  visibleKey: TrackerKey | null;
+  label: string;
+  /** Calendar days since the last edit. */
+  days: number;
+  /** How many will actually be marked — `days`, capped at what is left. */
+  fill: number;
+  onClose: () => void;
+  onFill: () => void;
+}) {
+  const { colors } = useTheme();
+  const { t, isRTL } = useLanguage();
+
+  return (
+    <Modal
+      visible={visibleKey !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable
+        className="flex-1 items-center justify-center px-8"
+        style={{ backgroundColor: colors.overlay }}
+        onPress={onClose}
+      >
+        <Pressable
+          className="w-full rounded-3xl p-6"
+          style={{ backgroundColor: colors.card }}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View
+            className="w-12 h-12 rounded-2xl items-center justify-center self-center mb-3"
+            style={{ backgroundColor: colors.warnBg }}
+          >
+            <Ionicons name="calendar-outline" size={24} color={colors.warn} />
+          </View>
+          <Text
+            className="text-lg font-bold mb-1.5"
+            style={{ color: colors.text, textAlign: "center" }}
+          >
+            {t.tracker.untrackedTitle}
+          </Text>
+          <Text
+            className="text-sm leading-6"
+            style={{ color: colors.textSecondary, textAlign: "center" }}
+          >
+            {t.tracker.untrackedMsg(label, days)}
+          </Text>
+
+          {/* the gap, big */}
+          <View
+            className="items-center rounded-2xl border py-3 my-4"
+            style={{ backgroundColor: colors.warnBg, borderColor: colors.warn + "66" }}
+          >
+            <Text
+              className="text-4xl font-extrabold"
+              style={{ color: colors.warnText }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {days}
+            </Text>
+            <Text className="text-xs mt-0.5" style={{ color: colors.warnText }}>
+              {t.tracker.untrackedDays}
+            </Text>
+          </View>
+
+          <Text
+            className="text-xs mb-4"
+            style={{ color: colors.textMuted, textAlign: "center" }}
+          >
+            {t.tracker.untrackedFillHint(fill, days)}
+          </Text>
+
+          <View className="flex-row gap-3" style={{ flexDirection: isRTL ? "row-reverse" : "row" }}>
+            <TouchableOpacity
+              className="flex-1 py-3 rounded-2xl items-center border"
+              style={{ borderColor: colors.border }}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+                {t.tracker.untrackedLater}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 py-3 rounded-2xl items-center"
+              style={{ backgroundColor: colors.tint }}
+              onPress={onFill}
+              activeOpacity={0.85}
+            >
+              <Text className="text-sm font-bold" style={{ color: colors.addBtnText }}>
+                {t.tracker.untrackedFill(fill)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // ─── Main screen ─────────────────────────────────────────────────────────────
 export default function TrackerScreen() {
   const { colors } = useTheme();
   const { t, isRTL } = useLanguage();
-  const { counts, totalRemaining, totalCompleted, setMissed } = useTracker();
+  const { counts, totalRemaining, totalCompleted, setMissed, markCompleted } =
+    useTracker();
 
   const [editingKey, setEditingKey] = useState<TrackerKey | null>(null);
+
+  // ── untracked-days prompt ──
+  // prayer whose "you haven't tracked for N days" modal is open
+  const [gapKey, setGapKey] = useState<TrackerKey | null>(null);
+  // prompts the user closed without filling, keyed by the updatedAt they were
+  // shown for — any later edit to that prayer makes the dismissal stale, so
+  // the note reverts to plain text and the next real gap prompts again
+  const [gapDismissed, setGapDismissed] = useState<
+    Partial<Record<TrackerKey, number>>
+  >({});
+
+  const gapDays = gapKey ? daysSince(counts[gapKey].updatedAt) : 0;
+  const gapFill = gapKey ? Math.min(gapDays, remaining(counts[gapKey])) : 0;
+
+  const closeGap = useCallback(() => {
+    if (gapKey) {
+      const shownFor = counts[gapKey].updatedAt;
+      setGapDismissed((prev) => ({ ...prev, [gapKey]: shownFor }));
+    }
+    setGapKey(null);
+  }, [gapKey, counts]);
+
+  const fillGap = useCallback(async () => {
+    if (!gapKey || gapFill <= 0) return;
+    const key = gapKey;
+    setGapKey(null);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await markCompleted(key, gapFill);
+  }, [gapKey, gapFill, markCompleted]);
 
   const grandTotal = totalRemaining + totalCompleted;
   const overallPct = grandTotal > 0 ? totalCompleted / grandTotal : 0;
@@ -572,7 +769,12 @@ export default function TrackerScreen() {
               key={key}
               prayerKey={key}
               label={labelFor(key)}
+              gapDismissed={
+                gapDismissed[key] !== undefined &&
+                gapDismissed[key] === counts[key].updatedAt
+              }
               onEditTotal={setEditingKey}
+              onOpenGap={setGapKey}
             />
           ))}
         </View>
@@ -580,6 +782,15 @@ export default function TrackerScreen() {
         {/* shar'i qadha calculator (أقل المتيقّن) */}
         <QadhaCalculator />
       </ScrollView>
+
+      <UntrackedDaysModal
+        visibleKey={gapKey}
+        label={gapKey ? labelFor(gapKey) : ""}
+        days={gapDays}
+        fill={gapFill}
+        onClose={closeGap}
+        onFill={fillGap}
+      />
 
       <SetTotalModal
         visibleKey={editingKey}

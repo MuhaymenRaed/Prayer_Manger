@@ -38,9 +38,9 @@ import {
   dismissPinnedTimes,
   scheduleAthanTest,
 } from "../../services/notificationService";
-import { saveLocation } from "../../services/storageService";
+import { ALERTABLE_PRAYERS, saveLocation } from "../../services/storageService";
 import { useSyncStatus } from "../../services/syncStatus";
-import { SavedLocation } from "../../types/prayer";
+import { AlertablePrayer, SavedLocation } from "../../types/prayer";
 
 const DEFAULT_LAT = 31.9928;
 const DEFAULT_LON = 44.3357;
@@ -145,6 +145,90 @@ function ToggleRow({
 }
 
 // â”€â”€â”€ Action Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Prayer alert chips ──────────────────────────────────────────────────────
+// One tappable chip per daily prayer — which of the five raise an alert.
+function PrayerAlertChips({
+  label,
+  description,
+  value,
+  names,
+  onToggle,
+  disabled,
+  colors,
+  isRTL = false,
+}: {
+  label: string;
+  description: string;
+  value: Record<AlertablePrayer, boolean>;
+  names: Record<AlertablePrayer, string>;
+  onToggle: (prayer: AlertablePrayer) => void;
+  /** Greyed out while the master prayer-notifications switch is off. */
+  disabled: boolean;
+  colors: Colors;
+  isRTL?: boolean;
+}) {
+  return (
+    <View
+      className="px-5 py-4"
+      style={{
+        backgroundColor: colors.settingRow,
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.separator,
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <View style={{ alignItems: isRTL ? "flex-end" : "flex-start" }}>
+        <Text
+          className="text-sm font-medium mb-0.5"
+          style={{ color: colors.text }}
+        >
+          {label}
+        </Text>
+        <Text
+          className="text-xs"
+          style={{ color: colors.textSecondary, textAlign: isRTL ? "right" : "left" }}
+        >
+          {description}
+        </Text>
+      </View>
+      <View
+        className="flex-row flex-wrap gap-2 mt-3"
+        style={{ flexDirection: isRTL ? "row-reverse" : "row" }}
+      >
+        {ALERTABLE_PRAYERS.map((p) => {
+          const on = value[p];
+          return (
+            <TouchableOpacity
+              key={p}
+              className="flex-row items-center gap-1.5 rounded-full border px-3 py-1.5"
+              style={{
+                flexDirection: isRTL ? "row-reverse" : "row",
+                backgroundColor: on ? colors.tint : colors.countBox,
+                borderColor: on ? colors.tint : colors.border,
+              }}
+              onPress={() => onToggle(p)}
+              disabled={disabled}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={on ? "notifications" : "notifications-off-outline"}
+                size={13}
+                color={on ? colors.addBtnText : colors.textMuted}
+              />
+              <Text
+                className="text-xs font-semibold"
+                style={{ color: on ? colors.addBtnText : colors.textSecondary }}
+              >
+                {names[p]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function ActionRow({
   label,
   description,
@@ -605,6 +689,18 @@ export default function SettingsScreen() {
     await updateSetting("pinnedTimes", next);
     if (!next) dismissPinnedTimes().catch(() => {});
   }, [settings.pinnedTimes, updateSetting]);
+
+  // Per-prayer alert switch; NotificationManager reschedules on change.
+  const handleTogglePrayerAlert = useCallback(
+    (prayer: AlertablePrayer) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      updateSetting("alertPrayers", {
+        ...settings.alertPrayers,
+        [prayer]: !settings.alertPrayers[prayer],
+      });
+    },
+    [settings.alertPrayers, updateSetting],
+  );
 
   // Battery-optimization exemption + OEM guidance so prayer alerts fire
   // exactly on time with the app closed.
@@ -1340,6 +1436,16 @@ export default function SettingsScreen() {
             description={t.settings.prayerNotifDesc}
             value={settings.prayerNotifications}
             onToggle={toggleNotifications}
+            colors={colors}
+            isRTL={isRTL}
+          />
+          <PrayerAlertChips
+            label={t.settings.alertPrayers}
+            description={t.settings.alertPrayersDesc}
+            value={settings.alertPrayers}
+            names={t.athanNames}
+            onToggle={handleTogglePrayerAlert}
+            disabled={!settings.prayerNotifications}
             colors={colors}
             isRTL={isRTL}
           />

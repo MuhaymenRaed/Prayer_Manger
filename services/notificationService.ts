@@ -8,7 +8,7 @@ import {
   HAS_ATHAN_AUDIO,
 } from "../constants/athan";
 import { QuranVerse } from "../constants/quran";
-import { PrayerTimeInfo } from "../types/prayer";
+import { AlertablePrayer, PrayerTimeInfo } from "../types/prayer";
 import { getShiaPrayerTimes } from "./prayerTimesService";
 
 Notifications.setNotificationHandler({
@@ -261,6 +261,8 @@ export async function scheduleUpcomingPrayerAlerts(
   longitude: number,
   buildContent: (prayer: PrayerTimeInfo) => PrayerNotifContent,
   athan?: { mode: AthanMode; soundId: string },
+  /** Per-prayer switches; a prayer missing from the map is alerted. */
+  enabled?: Partial<Record<AlertablePrayer, boolean>>,
   days = 7,
 ): Promise<void> {
   const all: PrayerTimeInfo[] = [];
@@ -268,7 +270,12 @@ export async function scheduleUpcomingPrayerAlerts(
     const date = new Date(Date.now() + i * 86400000);
     all.push(...getShiaPrayerTimes(latitude, longitude, date).prayers);
   }
-  await schedulePrayerNotifications(all, false, buildContent, athan);
+  // Prayers switched off in Settings are dropped here, before scheduling,
+  // so the pass below still replaces (cancels) any alert they had before.
+  const wanted = enabled
+    ? all.filter((p) => enabled[p.name as AlertablePrayer] !== false)
+    : all;
+  await schedulePrayerNotifications(wanted, false, buildContent, athan);
 }
 
 function pinnedContent(body: string) {
